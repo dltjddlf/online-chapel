@@ -1,0 +1,12 @@
+{
+  "name": "online-chapel",
+  "version": "1.0.0",
+  "description": "새벽빛 온라인 예배당 - 웹 3D 실시간 공동 기도 공간",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

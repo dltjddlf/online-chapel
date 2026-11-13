@@ -1,0 +1,2219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>새벽빛 예배당 — 말없이 함께 머무는 평안의 자리</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Pretendard:wght@300;400;500;600&display=swap');
+
+    :root {
+      --bg-glass: rgba(24, 18, 14, 0.72);
+      --bg-glass-light: rgba(42, 32, 24, 0.78);
+      --border-warm: rgba(235, 195, 135, 0.28);
+      --gold: #f3c878;
+      --gold-soft: #fae2b0;
+      --text-main: #f9f3e8;
+      --text-sub: #cbbba4;
+      --accent: #e09f5a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0f0b08;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text-main);
+    }
+
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+    }
+
+    /* 3D Floating Labels Overlay */
+    #labels-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      overflow: hidden;
+    }
+
+    .avatar-label {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: opacity 0.25s ease;
+    }
+
+    .avatar-name {
+      background: rgba(18, 13, 9, 0.72);
+      border: 1px solid rgba(243, 200, 120, 0.35);
+      color: #f7ebd4;
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+      backdrop-filter: blur(6px);
+      font-family: 'Gowun Batang', serif;
+      letter-spacing: 0.02em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    }
+
+    .avatar-name.is-me {
+      border-color: rgba(243, 200, 120, 0.85);
+      background: rgba(45, 31, 18, 0.85);
+      color: #ffe3a3;
+      font-weight: 700;
+    }
+
+    .avatar-bubble {
+      background: linear-gradient(135deg, rgba(255, 236, 195, 0.95), rgba(243, 200, 120, 0.92));
+      color: #2b1d0e;
+      font-family: 'Gowun Batang', serif;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 14px;
+      white-space: nowrap;
+      box-shadow: 0 4px 15px rgba(243, 200, 120, 0.45);
+      animation: floatBubble 2.6s ease-out forwards;
+    }
+
+    @keyframes floatBubble {
+      0% { opacity: 0; transform: translateY(8px) scale(0.85); }
+      15% { opacity: 1; transform: translateY(0px) scale(1); }
+      80% { opacity: 1; transform: translateY(-10px) scale(1); }
+      100% { opacity: 0; transform: translateY(-18px) scale(0.95); }
+    }
+
+    .spot-hint {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      background: rgba(28, 20, 14, 0.78);
+      border: 1px solid rgba(243, 200, 120, 0.5);
+      color: var(--gold-soft);
+      font-size: 11px;
+      padding: 4px 9px;
+      border-radius: 99px;
+      pointer-events: auto;
+      cursor: pointer;
+      white-space: nowrap;
+      backdrop-filter: blur(4px);
+      transition: all 0.2s ease;
+    }
+    .spot-hint:hover {
+      background: rgba(243, 200, 120, 0.9);
+      color: #1f140a;
+      transform: translate(-50%, -55%) scale(1.06);
+    }
+
+    /* Top Header UI */
+    #top-bar {
+      position: fixed;
+      top: 18px;
+      left: 20px;
+      right: 20px;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      gap: 12px;
+    }
+
+    .glass-panel {
+      pointer-events: auto;
+      background: var(--bg-glass);
+      border: 1px solid var(--border-warm);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    .brand-box {
+      padding: 12px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .brand-title {
+      font-family: 'Gowun Batang', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gold-soft);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .online-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'Pretendard', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      color: #d9c7ad;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 9px;
+      border-radius: 99px;
+    }
+
+    .online-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #7ce38b;
+      box-shadow: 0 0 8px #7ce38b;
+      animation: pulseDot 2s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .reroll-btn {
+      background: rgba(243, 200, 120, 0.15);
+      border: 1px solid rgba(243, 200, 120, 0.35);
+      color: var(--gold-soft);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .reroll-btn:hover {
+      background: rgba(243, 200, 120, 0.3);
+    }
+
+    /* Right Controls (Time & Audio) */
+    .right-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    .control-row {
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid transparent;
+      color: var(--text-sub);
+      font-size: 12px;
+      padding: 6px 11px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+    }
+
+    .chip-btn:hover {
+      background: rgba(255, 255, 255, 0.13);
+      color: var(--text-main);
+    }
+
+    .chip-btn.active {
+      background: rgba(243, 200, 120, 0.22);
+      border-color: rgba(243, 200, 120, 0.55);
+      color: var(--gold-soft);
+      font-weight: 600;
+    }
+
+    /* Status Pill when Sitting/Praying */
+    #prayer-status-banner {
+      position: fixed;
+      top: 96px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9;
+      padding: 10px 22px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-family: 'Gowun Batang', serif;
+      font-size: 14px;
+      color: var(--gold-soft);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.35s ease;
+    }
+    #prayer-status-banner.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .timer-badge {
+      font-family: 'Pretendard', sans-serif;
+      font-weight: 600;
+      color: #fff;
+      background: rgba(243, 200, 120, 0.2);
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    /* Bottom Dock Bar */
+    #bottom-dock {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: min(94vw, 720px);
+      pointer-events: none;
+    }
+
+    .guide-hint {
+      font-size: 12px;
+      color: rgba(249, 243, 232, 0.78);
+      background: rgba(15, 11, 8, 0.65);
+      padding: 5px 14px;
+      border-radius: 99px;
+      border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(6px);
+      text-align: center;
+    }
+
+    .dock-buttons {
+      pointer-events: auto;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .action-btn {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(243, 200, 120, 0.25);
+      color: var(--text-main);
+      padding: 10px 15px;
+      border-radius: 13px;
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: rgba(243, 200, 120, 0.22);
+      border-color: rgba(243, 200, 120, 0.65);
+      transform: translateY(-2px);
+    }
+
+    .action-btn:active {
+      transform: translateY(0);
+    }
+
+    .action-btn.primary {
+      background: linear-gradient(135deg, rgba(224, 159, 90, 0.35), rgba(186, 116, 48, 0.35));
+      border-color: rgba(243, 200, 120, 0.6);
+      color: var(--gold-soft);
+    }
+
+    .count-pill {
+      font-size: 11px;
+      background: rgba(0, 0, 0, 0.35);
+      color: var(--gold);
+      padding: 2px 7px;
+      border-radius: 99px;
+    }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      background: rgba(8, 6, 4, 0.72);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-card {
+      background: linear-gradient(165deg, #251b13 0%, #17110c 100%);
+      border: 1px solid rgba(243, 200, 120, 0.42);
+      border-radius: 22px;
+      width: min(92vw, 480px);
+      padding: 28px 26px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.75);
+      position: relative;
+      color: var(--text-main);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      background: rgba(255,255,255,0.08);
+      border: none;
+      color: var(--text-sub);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .modal-close:hover {
+      background: rgba(255,255,255,0.18);
+      color: #fff;
+    }
+
+    .modal-title {
+      font-family: 'Gowun Batang', serif;
+      font-size: 21px;
+      color: var(--gold-soft);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-desc {
+      font-size: 13px;
+      color: var(--text-sub);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    /* Word Card UI */
+    .mood-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .mood-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(243, 200, 120, 0.22);
+      color: var(--text-main);
+      padding: 9px 8px;
+      border-radius: 11px;
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .mood-btn:hover, .mood-btn.active {
+      background: rgba(243, 200, 120, 0.24);
+      border-color: var(--gold);
+      color: var(--gold-soft);
+      font-weight: 600;
+    }
+
+    .scripture-paper {
+      background: linear-gradient(155deg, #fbf3e4 0%, #f1dfc0 100%);
+      color: #2c1e11;
+      border-radius: 16px;
+      padding: 24px 20px;
+      box-shadow: inset 0 0 24px rgba(139, 94, 43, 0.18);
+      border: 1px solid #dcc094;
+      margin-bottom: 16px;
+      text-align: center;
+      font-family: 'Gowun Batang', serif;
+    }
+
+    .scripture-verse {
+      font-size: 16.5px;
+      line-height: 1.75;
+      font-weight: 700;
+      margin-bottom: 12px;
+      word-break: keep-all;
+    }
+
+    .scripture-ref {
+      font-size: 13.5px;
+      color: #6e4f2c;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .scripture-meditation {
+      font-size: 12.5px;
+      color: #543d23;
+      line-height: 1.6;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(110, 79, 44, 0.3);
+      word-break: keep-all;
+    }
+
+    /* Candle Prayer Input */
+    .prayer-input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(243, 200, 120, 0.35);
+      border-radius: 12px;
+      color: #fff;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-family: 'Gowun Batang', serif;
+      margin-bottom: 14px;
+      outline: none;
+    }
+    .prayer-input:focus {
+      border-color: var(--gold);
+    }
+
+    .prayer-wall-list {
+      max-height: 185px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 14px;
+      padding-right: 4px;
+    }
+
+    .prayer-wall-item {
+      background: rgba(255, 255, 255, 0.05);
+      border-left: 3px solid var(--gold);
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+    .prayer-wall-meta {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-top: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .full-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #e5a95c, #c88232);
+      border: none;
+      color: #1c1208;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: filter 0.2s;
+    }
+    .full-btn:hover {
+      filter: brightness(1.08);
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 115px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: rgba(26, 19, 12, 0.92);
+      border: 1px solid var(--gold);
+      color: var(--gold-soft);
+      padding: 9px 18px;
+      border-radius: 99px;
+      font-size: 13px;
+      font-family: 'Gowun Batang', serif;
+      z-index: 40;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 680px) {
+      #top-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .right-controls {
+        align-items: stretch;
+      }
+      .control-row {
+        justify-content: center;
+      }
+      .action-btn {
+        padding: 8px 11px;
+        font-size: 12.5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="labels-container"></div>
+
+  <!-- Top Header -->
+  <header id="top-bar">
+    <div class="glass-panel brand-box">
+      <div class="brand-title">
+        <span>⛪ 새벽빛 예배당</span>
+        <span class="online-badge">
+          <span class="online-dot"></span>
+          <span id="online-count">함께 기도하는 이 7명</span>
+        </span>
+      </div>
+      <div class="brand-sub">
+        <span>나의 이름: <strong id="my-name-display" style="color: var(--gold-soft);">온유한 어린양</strong></span>
+        <button class="reroll-btn" id="btn-reroll-name" title="새로운 은혜의 이름으로 변경">이름 바꾸기 ↻</button>
+        <button class="reroll-btn" id="btn-open-invite" style="background: rgba(243, 200, 120, 0.3); border-color: var(--gold); font-weight: 600;">🔗 다른 사람 초대하기</button>
+      </div>
+    </div>
+
+    <div class="right-controls">
+      <!-- Time of Day Switcher -->
+      <div class="glass-panel control-row">
+        <button class="chip-btn active" data-mode="dawn">🌅 새벽기도</button>
+        <button class="chip-btn" data-mode="day">☀️ 주일 정오</button>
+        <button class="chip-btn" data-mode="night">🌙 밤의 묵상</button>
+      </div>
+      <!-- Ambient Sound Mixer -->
+      <div class="glass-panel control-row">
+        <button class="chip-btn" id="btn-sound-hymn">🎹 피아노 찬양 OFF</button>
+        <button class="chip-btn" id="btn-sound-rain">🌧️ 창밖 빗소리 OFF</button>
+        <button class="chip-btn" id="btn-sound-bell">🔔 예배당 종 울리기</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sitting / Kneeling Prayer Status Banner -->
+  <div id="prayer-status-banner" class="glass-panel">
+    <span id="prayer-posture-text">🪑 장의자에 앉아 조용히 기도 중입니다</span>
+    <span class="timer-badge" id="prayer-timer">00:00</span>
+    <button class="reroll-btn" id="btn-stand-up">일어나기 (이동)</button>
+  </div>
+
+  <!-- Bottom Action Dock -->
+  <footer id="bottom-dock">
+    <div class="guide-hint" id="guide-hint">
+      💡 바닥이나 장의자를 클릭(터치)해 이동·착석하거나, 방향키(WASD)로 걸어보세요. 마우스 드래그로 시점을 회전합니다.
+    </div>
+    <div class="glass-panel dock-buttons">
+      <button class="action-btn primary" id="btn-sit-toggle">
+        <span>🪑 의자 앉기 / 무릎기도</span>
+      </button>
+      <button class="action-btn" id="btn-amen">
+        <span>🙏 아멘</span>
+        <span class="count-pill" id="amen-count">0</span>
+      </button>
+      <button class="action-btn" id="btn-peace">
+        <span>🕊️ 평안을 빕니다</span>
+      </button>
+      <button class="action-btn" id="btn-open-candle">
+        <span>🕯️ 소망 촛불 켜기</span>
+        <span class="count-pill" id="candle-count">12</span>
+      </button>
+      <button class="action-btn" id="btn-open-word">
+        <span>📖 오늘의 말씀 뽑기</span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- Modal 1: Today's Bible Verse -->
+  <div class="modal-backdrop" id="modal-word">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-word">✕</button>
+      <div class="modal-title">📖 오늘의 은혜 말씀 뽑기</div>
+      <div class="modal-desc">지금 당신의 마음 상태에 가장 필요한 하나님의 말씀과 묵상 한 줄을 전해드립니다.</div>
+
+      <div class="mood-grid" id="mood-grid">
+        <button class="mood-btn active" data-mood="peace">🕊️ 평안·쉼</button>
+        <button class="mood-btn" data-mood="comfort">💧 위로·눈물</button>
+        <button class="mood-btn" data-mood="courage">🔥 담대함·용기</button>
+        <button class="mood-btn" data-mood="hope">🌅 새벽·소망</button>
+        <button class="mood-btn" data-mood="thanks">🌿 감사·은혜</button>
+        <button class="mood-btn" data-mood="guidance">🧭 인도하심</button>
+      </div>
+
+      <div class="scripture-paper">
+        <div class="scripture-verse" id="verse-text">
+          "수고하고 무거운 짐 진 자들아 다 내게로 오라 내가 너희를 쉬게 하리라"
+        </div>
+        <div class="scripture-ref" id="verse-ref">마태복음 11장 28절</div>
+        <div class="scripture-meditation" id="verse-meditation">
+          오늘 하루도 애쓰셨습니다. 모든 무거운 짐을 십자가 앞에 내려놓고 주님이 주시는 온전한 쉼을 누리세요.
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="full-btn" id="btn-draw-again" style="background: rgba(243,200,120,0.2); color: var(--gold-soft); border: 1px solid var(--gold);">다른 말씀 뽑기</button>
+        <button class="full-btn" id="btn-copy-verse">말씀 카드 복사하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Prayer Candle & 1-Line Prayer Wall -->
+  <div class="modal-backdrop" id="modal-candle">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-candle">✕</button>
+      <div class="modal-title">🕯️ 소망 촛불 켜기 & 한 줄 기도</div>
+      <div class="modal-desc">
+        강단 앞 소망 촛불대에 따뜻한 불을 밝힙니다. 말없는 기도 제목을 남기시면 등불과 함께 예배당에 올려집니다.
+      </div>
+
+      <input type="text" id="prayer-input" class="prayer-input" maxlength="65" placeholder="예) 가족의 건강과 마음의 평안을 허락해 주세요 (비워두셔도 촛불이 켜집니다)" />
+      <button class="full-btn" id="btn-submit-candle">🕯️ 촛불 밝히고 기도 올리기</button>
+
+      <div class="prayer-wall-list" id="prayer-wall-list"></div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Invite Others & Real-time Sanctuary Room -->
+  <div class="modal-backdrop" id="modal-invite">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-invite">✕</button>
+      <div class="modal-title">🔗 다른 사람 초대하기 (실시간 예배당)</div>
+      <div class="modal-desc">
+        같은 예배당 방 이름(링크)으로 접속한 분들은 <strong>별도 가입 없이 실시간으로 한 공간에서</strong> 서로의 아바타와 '🙏 아멘' 인사, 소망 촛불을 함께 나누게 됩니다.
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display:block; font-size:12px; color:var(--gold-soft); margin-bottom:6px;">
+          ⛪ 예배당 방 이름 (우리 교회·셀·소그룹 전용 방 만들기)
+        </label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="room-input" class="prayer-input" style="margin-bottom:0;" maxlength="30" placeholder="예: 본당, 사랑교회새벽기도, 청년부기도방" />
+          <button class="reroll-btn" id="btn-change-room" style="padding:0 14px; white-space:nowrap; font-size:13px;">방 이동</button>
+        </div>
+      </div>
+
+      <div class="scripture-paper" style="padding:16px; margin-bottom:14px; text-align:left; font-size:13px;">
+        <div style="font-weight:700; color:#4a2f1d; margin-bottom:6px;">💌 카카오톡 / 문자 초대장 미리보기</div>
+        <div id="invite-preview-text" style="color:#543d23; line-height:1.55; word-break:break-all;"></div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <button class="full-btn" id="btn-copy-invite">📋 초대장 + 접속 링크 복사하기</button>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(243,200,120,0.22); border-radius:12px; padding:12px; font-size:12px; color:var(--text-sub); line-height:1.55;">
+        <strong style="color:var(--gold-soft);">💡 내 컴퓨터 밖의 지인에게 링크를 보내려면?</strong><br/>
+        현재 파일이 내 PC(<code>C:\...</code>)에 열려 있다면, <a href="https://app.netlify.com/drop" target="_blank" style="color:var(--gold); text-decoration:underline;">Netlify Drop</a> 페이지에 이 <code>온라인예배당</code> 폴더를 마우스로 끌어다 놓기만 하면 <strong>10초 만에 무료 인터넷 주소(https://...)</strong>가 만들어져 카톡으로 누구나 접속할 수 있습니다! (같은 PC에서 새 탭으로 열어도 즉시 서로 만납니다)
+      </div>
+    </div>
+  </div>
+
+  <div id="toast">말씀이 클립보드에 복사되었습니다.</div>
+
+  <!-- Three.js & MQTT.js (WebSockets Realtime Sync) CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script>
+    /**************************************************************
+     * 1. DATA: GENTLE NAMES, SCRIPTURE VERSES, INITIAL PRAYERS
+     **************************************************************/
+    const ADJECTIVES = ['온유한', '고요한', '새벽빛', '따뜻한', '은혜로운', '겸손한', '평안한', '신실한', '맑은샘', '소망의', '기도하는', '찬양하는'];
+    const NOUNS = ['어린양', '감람나무', '작은등불', '백합화', '비둘기', '포도나무', '물댄동산', '청지기', '순례자', '밀알', '별빛', '시냇가'];
+    const AVATAR_COLORS = [0xd99b66, 0x8fa882, 0x7b92b8, 0xc77d7d, 0xb896c8, 0xd4b475, 0x6fa3a0];
+
+    const SCRIPTURES = {
+      peace: [
+        {
+          verse: '"평안을 너희에게 끼치노니 곧 나의 평안을 너희에게 주노라 내가 너희에게 주는 것은 세상이 주는 것과 같지 아니하니라"',
+          ref: '요한복음 14장 27절',
+          meditation: '세상의 소란함이 멈추지 않아도, 주님이 주시는 깊은 평안이 당신의 마음을 안전하게 지키십니다.'
+        },
+        {
+          verse: '"아무것도 염려하지 말고 다만 모든 일에 기도와 간구로, 너희 구할 것을 감사함으로 하나님께 아뢰라"',
+          ref: '빌립보서 4장 6절',
+          meditation: '걱정의 무게를 기도의 언어로 바꿀 때, 모든 지각에 뛰어난 하나님의 평강이 마음과 생각을 지키십니다.'
+        }
+      ],
+      comfort: [
+        {
+          verse: '"수고하고 무거운 짐 진 자들아 다 내게로 오라 내가 너희를 쉬게 하리라"',
+          ref: '마태복음 11장 28절',
+          meditation: '홀로 버텨온 시간들을 주님은 다 아십니다. 이 자리에서 잠시 어깨의 짐을 내려놓으세요.'
+        },
+        {
+          verse: '"여호와는 마음이 상한 자를 가까이 하시고 충심으로 통회하는 자를 구원하시는도다"',
+          ref: '시편 34장 18절',
+          meditation: '말로 다 표현하지 못한 한숨과 눈물조차 주님께는 가장 귀한 기도로 들려집니다.'
+        }
+      ],
+      courage: [
+        {
+          verse: '"두려워하지 말라 내가 너와 함께 함이라 놀라지 말라 나는 네 하나님이 됨이라 내가 너를 굳세게 하리라"',
+          ref: '이사야 41장 10절',
+          meditation: '앞길이 안개처럼 흐릿해 보여도, 당신의 손을 붙드신 분은 결코 손을 놓지 않으십니다.'
+        },
+        {
+          verse: '"내가 네게 명령한 것이 아니냐 강하고 담대하라 두려워하지 말며 놀라지 말라 네가 어디로 가든지 네 하나님 여호와가 너와 함께하느니라"',
+          ref: '여호수아 1장 9절',
+          meditation: '오늘 내딛는 작은 걸음마다 주님이 동행하시며 새 힘을 부어주실 것입니다.'
+        }
+      ],
+      hope: [
+        {
+          verse: '"여호와의 인자와 긍휼이 무궁하시므로 우리가 진멸되지 아니함이니이다 이것들이 아침마다 새로우니 주의 성실하심이 크시도소이다"',
+          ref: '예레미야애가 3장 22~23절',
+          meditation: '어제의 아픔이 어떠했든, 오늘 새벽 주님의 은혜는 처음처럼 새롭게 시작됩니다.'
+        },
+        {
+          verse: '"오직 여호와를 앙망하는 자는 새 힘을 얻으리니 독수리가 날개치며 올라감 같을 것이요"',
+          ref: '이사야 40장 31절',
+          meditation: '잠잠히 주님을 바라보는 이 고요한 시간이 당신을 다시 날아오르게 할 새 힘의 원천입니다.'
+        }
+      ],
+      thanks: [
+        {
+          verse: '"여호와는 나의 목자시니 내게 부족함이 없으리로다 그가 나를 푸른 풀밭에 누이시며 쉴 만한 물가로 인도하시는도다"',
+          ref: '시편 23장 1~2절',
+          meditation: '지나온 걸음을 돌아보면 모든 순간이 당연한 것이 아닌 은혜였음을 고백하게 됩니다.'
+        },
+        {
+          verse: '"항상 기뻐하라 쉬지 말고 기도하라 범사에 감사하라 이것이 그리스도 예수 안에서 너희를 향하신 하나님의 뜻이니라"',
+          ref: '데살로니가전서 5장 16~18절',
+          meditation: '작은 감사의 고백 하나가 어두운 방을 밝히는 따뜻한 촛불이 됩니다.'
+        }
+      ],
+      guidance: [
+        {
+          verse: '"너는 마음을 다하여 여호와를 신뢰하고 네 명철을 의지하지 말라 너는 범사에 그를 인정하라 그리하면 네 길을 지도하시리라"',
+          ref: '잠언 3장 5~6절',
+          meditation: '모든 해답을 지금 알지 못해도 괜찮습니다. 길을 만드시는 분께 오늘의 방향을 맡겨보세요.'
+        },
+        {
+          verse: '"주의 말씀은 내 발에 등이요 내 길에 빛이니이다"',
+          ref: '시편 119장 105절',
+          meditation: '멀리 보이지 않는 밤길에도 바로 한 걸음 앞을 비추는 등불 하나면 충분합니다.'
+        }
+      ]
+    };
+
+    const prayerNotes = [
+      { name: '고요한 감람나무', text: '오늘 하루 마음의 불안을 내려놓고 주님의 평안을 구합니다.', time: '방금 전' },
+      { name: '새벽빛 어린양', text: '사랑하는 가족들의 건강과 평화를 지켜주소서.', time: '3분 전' },
+      { name: '온유한 백합화', text: '새로운 시작 앞에서 두려움 대신 담대함을 허락해 주세요.', time: '7분 전' },
+      { name: '따뜻한 작은등불', text: '지친 모든 이들에게 따뜻한 위로가 임하는 밤 되기를 기도합니다.', time: '12분 전' }
+    ];
+
+    function randomName() {
+      const a = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+      const n = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+      return `${a} ${n}`;
+    }
+
+    /**************************************************************
+     * 2. WEB AUDIO API SYNTHESIZER (HYMN PIANO, RAIN, BELL)
+     **************************************************************/
+    class ChapelAudio {
+      constructor() {
+        this.ctx = null;
+        this.hymnPlaying = false;
+        this.rainPlaying = false;
+        this.hymnTimer = null;
+        this.rainNode = null;
+        this.rainGain = null;
+      }
+
+      ensureContext() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playPianoNote(freq, duration = 2.6, volume = 0.08) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc1.type = 'sine';
+        osc2.type = 'triangle';
+        osc1.frequency.setValueAtTime(freq, now);
+        osc2.frequency.setValueAtTime(freq * 2, now);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1400, now);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(volume, now + 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.0005, now + duration);
+
+        osc1.connect(filter);
+        osc2.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + duration);
+        osc2.stop(now + duration);
+      }
+
+      toggleHymn() {
+        this.ensureContext();
+        this.hymnPlaying = !this.hymnPlaying;
+        if (this.hymnPlaying) {
+          // Peaceful Hymn Chord Progression (F - C/E - Dm - Bb - F - C - F)
+          const chords = [
+            [174.61, 220.00, 261.63, 349.23, 440.00], // F maj
+            [164.81, 196.00, 261.63, 329.63, 392.00], // C/E
+            [146.83, 220.00, 293.66, 349.23, 440.00], // Dm7
+            [116.54, 174.61, 233.08, 293.66, 349.23], // Bb maj7
+            [174.61, 220.00, 261.63, 349.23, 523.25], // F
+            [130.81, 196.00, 261.63, 329.63, 392.00]  // C
+          ];
+          let step = 0;
+          const playStep = () => {
+            if (!this.hymnPlaying) return;
+            const chord = chords[step % chords.length];
+            chord.forEach((f, idx) => {
+              setTimeout(() => {
+                if (this.hymnPlaying) {
+                  this.playPianoNote(f, 3.2, idx === 0 ? 0.065 : 0.045);
+                }
+              }, idx * 360);
+            });
+            step++;
+            this.hymnTimer = setTimeout(playStep, 2600);
+          };
+          playStep();
+        } else if (this.hymnTimer) {
+          clearTimeout(this.hymnTimer);
+        }
+        return this.hymnPlaying;
+      }
+
+      toggleRain() {
+        this.ensureContext();
+        this.rainPlaying = !this.rainPlaying;
+        if (this.rainPlaying) {
+          const bufferSize = this.ctx.sampleRate * 2;
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          let lastOut = 0.0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            data[i] = (lastOut + (0.02 * white)) / 1.02;
+            lastOut = data[i];
+            data[i] *= 1.8;
+          }
+          this.rainNode = this.ctx.createBufferSource();
+          this.rainNode.buffer = buffer;
+          this.rainNode.loop = true;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.value = 650;
+
+          this.rainGain = this.ctx.createGain();
+          this.rainGain.gain.value = 0.055;
+
+          this.rainNode.connect(filter);
+          filter.connect(this.rainGain);
+          this.rainGain.connect(this.ctx.destination);
+          this.rainNode.start();
+        } else if (this.rainNode) {
+          try { this.rainNode.stop(); } catch (e) {}
+          this.rainNode = null;
+        }
+        return this.rainPlaying;
+      }
+
+      ringBell() {
+        this.ensureContext();
+        const now = this.ctx.currentTime;
+        const partials = [523.25, 783.99, 1046.5, 1318.5];
+        partials.forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(0.08 / (i + 1), now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 4.2 - i * 0.5);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 4.3);
+        });
+      }
+
+      playSoftChime() {
+        this.ensureContext();
+        this.playPianoNote(523.25, 1.5, 0.045);
+        setTimeout(() => this.playPianoNote(659.25, 1.8, 0.045), 140);
+      }
+    }
+
+    const audio = new ChapelAudio();
+
+    /**************************************************************
+     * 3. THREE.JS 3D PROTESTANT CHAPEL SCENE SETUP
+     **************************************************************/
+    const container = document.getElementById('canvas-container');
+    const labelsContainer = document.getElementById('labels-container');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x13101c);
+    scene.fog = new THREE.FogExp2(0x13101c, 0.022);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 120);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    // Materials
+    const woodDarkMat = new THREE.MeshStandardMaterial({ color: 0x4a2f1d, roughness: 0.72, metalness: 0.05 });
+    const woodMedMat = new THREE.MeshStandardMaterial({ color: 0x6b442a, roughness: 0.65, metalness: 0.05 });
+    const woodLightMat = new THREE.MeshStandardMaterial({ color: 0x8c5c38, roughness: 0.6, metalness: 0.05 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x3b2618, roughness: 0.55, metalness: 0.08 });
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xe6dac8, roughness: 0.88 });
+    const carpetMat = new THREE.MeshStandardMaterial({ color: 0x7c2323, roughness: 0.9 });
+    const cushionMat = new THREE.MeshStandardMaterial({ color: 0x692626, roughness: 0.85 });
+    const goldMat = new THREE.MeshStandardMaterial({
+      color: 0xf6cf7c,
+      emissive: 0xd99830,
+      emissiveIntensity: 0.55,
+      roughness: 0.25,
+      metalness: 0.6
+    });
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0x88749c, 0.55);
+    scene.add(ambientLight);
+
+    const hemiLight = new THREE.HemisphereLight(0xffdfa8, 0x291d19, 0.55);
+    scene.add(hemiLight);
+
+    const crossLight = new THREE.PointLight(0xffb85c, 2.1, 18);
+    crossLight.position.set(0, 6.2, -10.8);
+    crossLight.castShadow = true;
+    scene.add(crossLight);
+
+    const chancelLight = new THREE.SpotLight(0xffd9a0, 1.4, 26, Math.PI / 3, 0.6);
+    chancelLight.position.set(0, 9.5, -5.5);
+    chancelLight.target.position.set(0, 0.5, -9);
+    chancelLight.castShadow = true;
+    scene.add(chancelLight);
+    scene.add(chancelLight.target);
+
+    const candleStandLight = new THREE.PointLight(0xff9e3d, 1.35, 9);
+    candleStandLight.position.set(4.5, 2.2, -7.2);
+    scene.add(candleStandLight);
+
+    // Build Chapel Architecture
+    const chapelGroup = new THREE.Group();
+    scene.add(chapelGroup);
+
+    // Floor & Red Carpet Runner
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 26), floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    chapelGroup.add(floor);
+
+    const aisleCarpet = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.03, 19), carpetMat);
+    aisleCarpet.position.set(0, 0.015, 1.5);
+    aisleCarpet.receiveShadow = true;
+    chapelGroup.add(aisleCarpet);
+
+    // Elevated Chancel Platform (강단)
+    const platform = new THREE.Mesh(new THREE.BoxGeometry(15, 0.6, 5.2), woodDarkMat);
+    platform.position.set(0, 0.3, -9.2);
+    platform.receiveShadow = true;
+    platform.castShadow = true;
+    chapelGroup.add(platform);
+
+    const platformStep = new THREE.Mesh(new THREE.BoxGeometry(6, 0.3, 0.8), woodMedMat);
+    platformStep.position.set(0, 0.15, -6.3);
+    platformStep.receiveShadow = true;
+    chapelGroup.add(platformStep);
+
+    const platformCarpet = new THREE.Mesh(new THREE.BoxGeometry(11, 0.03, 4.4), carpetMat);
+    platformCarpet.position.set(0, 0.615, -9.2);
+    chapelGroup.add(platformCarpet);
+
+    // Walls (Front, Left, Right, Ceiling Beams)
+    const frontWall = new THREE.Mesh(new THREE.BoxGeometry(20, 11, 0.6), wallMat);
+    frontWall.position.set(0, 5.5, -12);
+    frontWall.receiveShadow = true;
+    chapelGroup.add(frontWall);
+
+    // Wood Wainscoting on Front Wall behind Cross
+    const altarpiecePanel = new THREE.Mesh(new THREE.BoxGeometry(6.4, 9.6, 0.25), woodDarkMat);
+    altarpiecePanel.position.set(0, 4.9, -11.65);
+    chapelGroup.add(altarpiecePanel);
+
+    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 10, 26), wallMat);
+    leftWall.position.set(-10, 5, 0);
+    chapelGroup.add(leftWall);
+
+    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 10, 26), wallMat);
+    rightWall.position.set(10, 5, 0);
+    chapelGroup.add(rightWall);
+
+    // Wooden Roof Trusses
+    for (let z = -10; z <= 10; z += 4) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(20, 0.35, 0.35), woodDarkMat);
+      beam.position.set(0, 9.4, z);
+      chapelGroup.add(beam);
+
+      const pillarL = new THREE.Mesh(new THREE.BoxGeometry(0.45, 9.6, 0.45), woodDarkMat);
+      pillarL.position.set(-9.6, 4.8, z);
+      chapelGroup.add(pillarL);
+
+      const pillarR = new THREE.Mesh(new THREE.BoxGeometry(0.45, 9.6, 0.45), woodDarkMat);
+      pillarR.position.set(9.6, 4.8, z);
+      chapelGroup.add(pillarR);
+    }
+
+    // Stained Glass Windows & Volumetric Light Rays
+    const windowGlassMats = [];
+    const lightRayMats = [];
+    const windowZPositions = [-6, -2, 2, 6];
+    windowZPositions.forEach((z, idx) => {
+      const colors = [0xffb76b, 0x8bb8ff, 0xf29b7e, 0xffd27d];
+      const glassMat = new THREE.MeshBasicMaterial({
+        color: colors[idx % colors.length],
+        transparent: true,
+        opacity: 0.72
+      });
+      windowGlassMats.push(glassMat);
+
+      // Left and Right Windows
+      [-9.68, 9.68].forEach((xPos, sideIdx) => {
+        const winPane = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 4.2), glassMat);
+        winPane.position.set(xPos, 4.8, z);
+        winPane.rotation.y = sideIdx === 0 ? Math.PI / 2 : -Math.PI / 2;
+        chapelGroup.add(winPane);
+      });
+
+      // God Ray Slanting from Left Window
+      const rayMat = new THREE.MeshBasicMaterial({
+        color: 0xffe0a3,
+        transparent: true,
+        opacity: 0.065,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+      lightRayMats.push(rayMat);
+      const rayGeom = new THREE.CylinderGeometry(0.7, 2.0, 9.5, 16, 1, true);
+      const rayMesh = new THREE.Mesh(rayGeom, rayMat);
+      rayMesh.position.set(-6.0, 3.1, z);
+      rayMesh.rotation.z = -Math.PI / 4.2;
+      chapelGroup.add(rayMesh);
+    });
+
+    // Glowing Front Cross (십자가)
+    const crossGroup = new THREE.Group();
+    const crossVert = new THREE.Mesh(new THREE.BoxGeometry(0.42, 3.6, 0.22), goldMat);
+    const crossHoriz = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.42, 0.22), goldMat);
+    crossHoriz.position.y = 0.65;
+    crossGroup.add(crossVert, crossHoriz);
+    crossGroup.position.set(0, 6.0, -11.35);
+    chapelGroup.add(crossGroup);
+
+    // Pulpit & Open Bible (강대상 & 성경책)
+    const pulpitGroup = new THREE.Group();
+    const pulpitBase = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.35, 0.9), woodMedMat);
+    pulpitBase.position.y = 0.675;
+    pulpitBase.castShadow = true;
+    const pulpitTop = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.12, 1.1), woodLightMat);
+    pulpitTop.position.set(0, 1.38, 0.05);
+    pulpitTop.rotation.x = 0.22;
+
+    // Open Bible on Pulpit
+    const bibleMat = new THREE.MeshStandardMaterial({ color: 0xfbf2dc, emissive: 0xffe19c, emissiveIntensity: 0.28 });
+    const bibleMesh = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 0.48), bibleMat);
+    bibleMesh.position.set(0, 1.46, 0.08);
+    bibleMesh.rotation.x = 0.22;
+    pulpitGroup.add(pulpitBase, pulpitTop, bibleMesh);
+    pulpitGroup.position.set(0, 0.6, -8.3);
+    chapelGroup.add(pulpitGroup);
+
+    // Wooden Upright/Grand Piano on Left of Chancel (예배 피아노)
+    const pianoGroup = new THREE.Group();
+    const pianoBody = new THREE.Mesh(new THREE.BoxGeometry(2.1, 1.25, 1.2), woodDarkMat);
+    pianoBody.position.y = 0.625;
+    pianoBody.castShadow = true;
+    const pianoKeys = new THREE.Mesh(
+      new THREE.BoxGeometry(1.7, 0.08, 0.35),
+      new THREE.MeshStandardMaterial({ color: 0xfaf6ee })
+    );
+    pianoKeys.position.set(0, 0.82, 0.55);
+    pianoGroup.add(pianoBody, pianoKeys);
+    pianoGroup.position.set(-4.3, 0.6, -8.6);
+    pianoGroup.rotation.y = 0.35;
+    chapelGroup.add(pianoGroup);
+
+    // Prayer Candle Stand on Right of Chancel (소망 촛불대)
+    const candleTableGroup = new THREE.Group();
+    const cTable = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.15, 0.95, 24), woodMedMat);
+    cTable.position.y = 0.475;
+    cTable.castShadow = true;
+    candleTableGroup.add(cTable);
+    candleTableGroup.position.set(4.5, 0.6, -7.6);
+    chapelGroup.add(candleTableGroup);
+
+    const flameMeshes = [];
+    const candleSlots = [];
+    for (let i = 0; i < 16; i++) {
+      const ring = i < 6 ? 0.42 : 0.88;
+      const countInRing = i < 6 ? 6 : 10;
+      const idxInRing = i < 6 ? i : i - 6;
+      const angle = (idxInRing / countInRing) * Math.PI * 2;
+      const cx = Math.cos(angle) * ring;
+      const cz = Math.sin(angle) * ring;
+
+      const candleWax = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.06, 0.06, 0.24, 10),
+        new THREE.MeshStandardMaterial({ color: 0xfff8e8, roughness: 0.4 })
+      );
+      candleWax.position.set(cx, 1.07, cz);
+      candleTableGroup.add(candleWax);
+
+      const flameMat = new THREE.MeshBasicMaterial({ color: 0xffc44d });
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.048, 0.14, 8), flameMat);
+      flame.position.set(cx, 1.24, cz);
+      flame.visible = i < 12; // 12 lit initially
+      candleTableGroup.add(flame);
+      flameMeshes.push(flame);
+      candleSlots.push({ flame, lit: i < 12 });
+    }
+
+    function lightNextCandle() {
+      const unlit = candleSlots.find(c => !c.lit);
+      if (unlit) {
+        unlit.lit = true;
+        unlit.flame.visible = true;
+      }
+      candleStandLight.intensity = Math.min(2.6, candleStandLight.intensity + 0.15);
+    }
+
+    // Kneeling Prayer Cushions at the Front Altar Steps (강단 앞 무릎기도 방석)
+    const seatSpots = [];
+    [-2.4, -1.2, 1.2, 2.4].forEach((xPos, idx) => {
+      const cushion = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.12, 0.55), cushionMat);
+      cushion.position.set(xPos, 0.06, -5.4);
+      cushion.receiveShadow = true;
+      chapelGroup.add(cushion);
+      seatSpots.push({
+        id: `kneel-${idx}`,
+        type: 'kneel',
+        position: new THREE.Vector3(xPos, 0, -5.4),
+        occupiedBy: null
+      });
+    });
+
+    // Wooden Pews (장의자 2열 x 4줄)
+    const pewRowsZ = [-3.0, -0.3, 2.4, 5.1];
+    const pewSidesX = [-4.2, 4.2];
+
+    pewRowsZ.forEach((zPos, rIdx) => {
+      pewSidesX.forEach((xCenter, sIdx) => {
+        const pewGroup = new THREE.Group();
+
+        // Seat plank
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.12, 0.72), woodMedMat);
+        seat.position.set(0, 0.52, 0);
+        seat.castShadow = true;
+        seat.receiveShadow = true;
+
+        // Cushion
+        const seatCushion = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.07, 0.62), cushionMat);
+        seatCushion.position.set(0, 0.61, 0.02);
+
+        // Backrest
+        const back = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.85, 0.12), woodLightMat);
+        back.position.set(0, 0.96, 0.32);
+        back.rotation.x = 0.12;
+        back.castShadow = true;
+
+        // Side armrests
+        [-2.25, 2.25].forEach(lx => {
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.15, 0.78), woodDarkMat);
+          leg.position.set(lx, 0.575, 0);
+          leg.castShadow = true;
+          pewGroup.add(leg);
+        });
+
+        pewGroup.add(seat, seatCushion, back);
+        pewGroup.position.set(xCenter, 0, zPos);
+        chapelGroup.add(pewGroup);
+
+        // 3 Sitting Spots per Pew
+        [-1.4, 0, 1.4].forEach((offsetX, spotIdx) => {
+          seatSpots.push({
+            id: `pew-${rIdx}-${sIdx}-${spotIdx}`,
+            type: 'pew',
+            position: new THREE.Vector3(xCenter + offsetX, 0, zPos - 0.05),
+            occupiedBy: null
+          });
+        });
+      });
+    });
+
+    // Floating Dust Motes / Warm Light Particles
+    const particleCount = 120;
+    const pGeom = new THREE.BufferGeometry();
+    const pPositions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      pPositions[i * 3] = (Math.random() - 0.5) * 17;
+      pPositions[i * 3 + 1] = 0.6 + Math.random() * 7.5;
+      pPositions[i * 3 + 2] = -10 + Math.random() * 18;
+    }
+    pGeom.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+    const pMat = new THREE.PointsMaterial({
+      color: 0xffe4ad,
+      size: 0.08,
+      transparent: true,
+      opacity: 0.55
+    });
+    const particles = new THREE.Points(pGeom, pMat);
+    scene.add(particles);
+
+    /**************************************************************
+     * 4. CUTE 3D AVATAR BUILDER ('산사' 스타일 캐릭터)
+     **************************************************************/
+    function createCuteAvatar(name, robeColor, isMe = false) {
+      const root = new THREE.Group();
+      const bodyGroup = new THREE.Group();
+      root.add(bodyGroup);
+
+      // Soft Shadow Blob under feet
+      const shadowMesh = new THREE.Mesh(
+        new THREE.CircleGeometry(0.38, 16),
+        new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32 })
+      );
+      shadowMesh.rotation.x = -Math.PI / 2;
+      shadowMesh.position.y = 0.02;
+      root.add(shadowMesh);
+
+      // Robe / Cozy Cardigan Torso
+      const torsoMat = new THREE.MeshStandardMaterial({ color: robeColor, roughness: 0.75 });
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.34, 0.72, 16), torsoMat);
+      torso.position.y = 0.42;
+      torso.castShadow = true;
+      bodyGroup.add(torso);
+
+      // Head
+      const skinMat = new THREE.MeshStandardMaterial({ color: 0xfce2c4, roughness: 0.6 });
+      const headGroup = new THREE.Group();
+      headGroup.position.y = 0.98;
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 20, 20), skinMat);
+      head.castShadow = true;
+      headGroup.add(head);
+
+      // Hair Cap
+      const hairMat = new THREE.MeshStandardMaterial({ color: 0x2e2018, roughness: 0.8 });
+      const hair = new THREE.Mesh(
+        new THREE.SphereGeometry(0.282, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.58),
+        hairMat
+      );
+      hair.rotation.x = -0.18;
+      headGroup.add(hair);
+
+      // Peaceful Eyes (Gentle closed/calm arcs)
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0x24170e });
+      const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), eyeMat);
+      const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), eyeMat);
+      eyeL.position.set(-0.085, 0.01, -0.245);
+      eyeR.position.set(0.085, 0.01, -0.245);
+      headGroup.add(eyeL, eyeR);
+
+      // Warm Blush Cheeks
+      const blushMat = new THREE.MeshBasicMaterial({ color: 0xf2968c, transparent: true, opacity: 0.45 });
+      const blushL = new THREE.Mesh(new THREE.CircleGeometry(0.038, 10), blushMat);
+      const blushR = new THREE.Mesh(new THREE.CircleGeometry(0.038, 10), blushMat);
+      blushL.position.set(-0.14, -0.04, -0.242);
+      blushR.position.set(0.14, -0.04, -0.242);
+      blushL.rotation.y = Math.PI;
+      blushR.rotation.y = Math.PI;
+      headGroup.add(blushL, blushR);
+
+      bodyGroup.add(headGroup);
+
+      // Hands (Folded in front when praying)
+      const handsGroup = new THREE.Group();
+      const handL = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 12), skinMat);
+      const handR = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 12), skinMat);
+      handL.position.set(-0.22, 0.48, -0.14);
+      handR.position.set(0.22, 0.48, -0.14);
+      handsGroup.add(handL, handR);
+      bodyGroup.add(handsGroup);
+
+      // HTML Name Tag
+      const labelEl = document.createElement('div');
+      labelEl.className = 'avatar-label';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'avatar-name' + (isMe ? ' is-me' : '');
+      nameEl.textContent = isMe ? `✨ ${name}` : name;
+      labelEl.appendChild(nameEl);
+      labelsContainer.appendChild(labelEl);
+
+      scene.add(root);
+
+      return {
+        root,
+        bodyGroup,
+        headGroup,
+        handL,
+        handR,
+        labelEl,
+        nameEl,
+        name,
+        isMe,
+        state: 'standing', // 'standing' | 'walking' | 'sitting' | 'kneeling'
+        targetPos: new THREE.Vector3(),
+        targetSeat: null,
+        currentSeat: null,
+        bowTime: 0,
+        walkPhase: Math.random() * 10
+      };
+    }
+
+    function showBubble(avatar, text) {
+      const bubble = document.createElement('div');
+      bubble.className = 'avatar-bubble';
+      bubble.textContent = text;
+      avatar.labelEl.insertBefore(bubble, avatar.nameEl);
+      setTimeout(() => bubble.remove(), 2600);
+    }
+
+    // Ripple Effect on the floor when praying / saying Amen
+    const activeRipples = [];
+    function spawnLightRipple(pos) {
+      const ringGeom = new THREE.RingGeometry(0.2, 0.32, 32);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0xffd885,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85
+      });
+      const ring = new THREE.Mesh(ringGeom, ringMat);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(pos.x, 0.04, pos.z);
+      scene.add(ring);
+      activeRipples.push({ mesh: ring, age: 0 });
+    }
+
+    // Create Player Avatar
+    const savedName = localStorage.getItem('chapel_my_name') || randomName();
+    localStorage.setItem('chapel_my_name', savedName);
+    document.getElementById('my-name-display').textContent = savedName;
+
+    const player = createCuteAvatar(savedName, 0xd99b66, true);
+    player.root.position.set(0, 0, 7.2);
+    player.targetPos.copy(player.root.position);
+
+    // Create Silent Companion Worshippers (무언의 동역자들)
+    const companions = [];
+    const companionConfigs = [
+      { name: '고요한 감람나무', color: 0x8fa882, seatIdx: 1 },
+      { name: '새벽빛 비둘기', color: 0x7b92b8, seatIdx: 5 },
+      { name: '온유한 백합화', color: 0xc77d7d, seatIdx: 9 },
+      { name: '기도하는 순례자', color: 0xb896c8, seatIdx: 12 },
+      { name: '따뜻한 작은등불', color: 0xd4b475, seatIdx: 18 },
+      { name: '맑은샘 청지기', color: 0x6fa3a0, seatIdx: 21 }
+    ];
+
+    companionConfigs.forEach(cfg => {
+      const comp = createCuteAvatar(cfg.name, cfg.color, false);
+      const seat = seatSpots[cfg.seatIdx];
+      if (seat) {
+        seat.occupiedBy = comp;
+        comp.currentSeat = seat;
+        comp.state = seat.type === 'kneel' ? 'kneeling' : 'sitting';
+        comp.root.position.copy(seat.position);
+        comp.targetPos.copy(seat.position);
+      }
+      companions.push(comp);
+    });
+
+    // Occasional Silent Amen / Prayer Bubble from Companions
+    setInterval(() => {
+      const c = companions[Math.floor(Math.random() * companions.length)];
+      const phrases = ['🙏 아멘', '🕯️ 조용히 기도 중...', '🕊️ 평안을 빕니다', '🙏 주여...'];
+      showBubble(c, phrases[Math.floor(Math.random() * phrases.length)]);
+      c.bowTime = 1.2;
+      spawnLightRipple(c.root.position);
+    }, 9500);
+
+    /**************************************************************
+     * 5. PLAYER MOVEMENT, SITTING & 3RD-PERSON CAMERA CONTROL
+     **************************************************************/
+    let camYaw = 0;
+    let camPitch = 0.36;
+    let camDist = 6.2;
+    let isDragging = false;
+    let dragMoved = false;
+    let prevMouse = { x: 0, y: 0 };
+
+    const keys = { KeyW: false, KeyA: false, KeyS: false, KeyD: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+    window.addEventListener('keydown', e => {
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+      if (keys.hasOwnProperty(e.code)) {
+        keys[e.code] = true;
+        if (player.state === 'sitting' || player.state === 'kneeling') {
+          standUpPlayer();
+        }
+      }
+    });
+    window.addEventListener('keyup', e => {
+      if (keys.hasOwnProperty(e.code)) keys[e.code] = false;
+    });
+
+    // Raycaster for Floor / Pew / Pulpit / Candle Table clicks
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    renderer.domElement.addEventListener('pointerdown', e => {
+      isDragging = true;
+      dragMoved = false;
+      prevMouse = { x: e.clientX, y: e.clientY };
+    });
+
+    window.addEventListener('pointermove', e => {
+      if (!isDragging) return;
+      const dx = e.clientX - prevMouse.x;
+      const dy = e.clientY - prevMouse.y;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragMoved = true;
+      camYaw -= dx * 0.0065;
+      camPitch = Math.max(0.12, Math.min(0.85, camPitch + dy * 0.0055));
+      prevMouse = { x: e.clientX, y: e.clientY };
+    });
+
+    window.addEventListener('pointerup', e => {
+      if (!isDragging) return;
+      isDragging = false;
+      if (!dragMoved) {
+        handleSceneClick(e.clientX, e.clientY);
+      }
+    });
+
+    window.addEventListener('wheel', e => {
+      camDist = Math.max(3.2, Math.min(10.5, camDist + e.deltaY * 0.004));
+    });
+
+    function handleSceneClick(clientX, clientY) {
+      pointer.x = (clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+
+      // Check if clicked near Candle Table
+      const hits = raycaster.intersectObjects(chapelGroup.children, true);
+      if (hits.length > 0) {
+        const pt = hits[0].point;
+
+        // Near Pulpit Bible?
+        if (pt.distanceTo(new THREE.Vector3(0, 1.5, -8.3)) < 1.8) {
+          openModal('modal-word');
+          return;
+        }
+        // Near Candle Stand?
+        if (pt.distanceTo(new THREE.Vector3(4.5, 1.2, -7.6)) < 2.0) {
+          openModal('modal-candle');
+          return;
+        }
+
+        // Near an available Pew or Kneeling spot?
+        let nearestSeat = null;
+        let minSeatDist = 1.25;
+        seatSpots.forEach(s => {
+          if (!s.occupiedBy || s.occupiedBy === player) {
+            const d = new THREE.Vector2(pt.x - s.position.x, pt.z - s.position.z).length();
+            if (d < minSeatDist) {
+              minSeatDist = d;
+              nearestSeat = s;
+            }
+          }
+        });
+
+        if (nearestSeat) {
+          walkToSeatAndSit(nearestSeat);
+          return;
+        }
+
+        // Otherwise walk to floor point within bounds
+        standUpPlayer();
+        player.targetPos.set(
+          Math.max(-8.2, Math.min(8.2, pt.x)),
+          0,
+          Math.max(-5.8, Math.min(9.2, pt.z))
+        );
+        player.state = 'walking';
+        spawnLightRipple(player.targetPos);
+      }
+    }
+
+    let prayerSeconds = 0;
+    let prayerInterval = null;
+
+    function walkToSeatAndSit(seat) {
+      if (player.currentSeat) player.currentSeat.occupiedBy = null;
+      player.targetSeat = seat;
+      player.targetPos.copy(seat.position);
+      player.state = 'walking';
+      spawnLightRipple(seat.position);
+    }
+
+    function engageSeat(seat) {
+      player.currentSeat = seat;
+      seat.occupiedBy = player;
+      player.targetSeat = null;
+      player.root.position.copy(seat.position);
+      player.root.rotation.y = 0; // Face the front Cross
+      player.state = seat.type === 'kneel' ? 'kneeling' : 'sitting';
+
+      // Smoothly orient camera toward front Cross
+      camYaw = 0;
+      camPitch = 0.25;
+
+      const banner = document.getElementById('prayer-status-banner');
+      const postureText = document.getElementById('prayer-posture-text');
+      postureText.textContent = seat.type === 'kneel'
+        ? '🙇 강단 앞 기도석에서 무릎 꿇고 간절히 기도 중입니다'
+        : '🪑 나무 장의자에 앉아 십자가를 바라보며 기도 중입니다';
+      banner.classList.add('visible');
+
+      if (!prayerInterval) {
+        prayerInterval = setInterval(() => {
+          prayerSeconds++;
+          const m = String(Math.floor(prayerSeconds / 60)).padStart(2, '0');
+          const s = String(prayerSeconds % 60).padStart(2, '0');
+          document.getElementById('prayer-timer').textContent = `${m}:${s}`;
+        }, 1000);
+      }
+      audio.playSoftChime();
+    }
+
+    function standUpPlayer() {
+      if (player.currentSeat) {
+        player.currentSeat.occupiedBy = null;
+        player.currentSeat = null;
+      }
+      player.targetSeat = null;
+      player.state = 'standing';
+      document.getElementById('prayer-status-banner').classList.remove('visible');
+    }
+
+    document.getElementById('btn-stand-up').addEventListener('click', standUpPlayer);
+
+    document.getElementById('btn-sit-toggle').addEventListener('click', () => {
+      if (player.state === 'sitting' || player.state === 'kneeling') {
+        standUpPlayer();
+        showToast('자리에서 일어났습니다. 자유롭게 걸어보세요.');
+      } else {
+        // Find closest unoccupied seat
+        let best = null;
+        let bestDist = Infinity;
+        seatSpots.forEach(s => {
+          if (!s.occupiedBy) {
+            const d = player.root.position.distanceTo(s.position);
+            if (d < bestDist) {
+              bestDist = d;
+              best = s;
+            }
+          }
+        });
+        if (best) walkToSeatAndSit(best);
+      }
+    });
+
+    /**************************************************************
+     * 6. UI INTERACTIONS (AMEN, PEACE, CANDLE, WORD, TIME MODE)
+     **************************************************************/
+    let amenTotal = parseInt(localStorage.getItem('chapel_amen_count') || '24', 10);
+    document.getElementById('amen-count').textContent = amenTotal;
+
+    document.getElementById('btn-amen').addEventListener('click', () => {
+      amenTotal++;
+      localStorage.setItem('chapel_amen_count', String(amenTotal));
+      document.getElementById('amen-count').textContent = amenTotal;
+      player.bowTime = 1.3;
+      showBubble(player, '🙏 아멘');
+      spawnLightRipple(player.root.position);
+      audio.playSoftChime();
+
+      // Companion responds with Amen after a brief moment
+      setTimeout(() => {
+        const resp = companions[Math.floor(Math.random() * companions.length)];
+        resp.bowTime = 1.2;
+        showBubble(resp, '🙏 아멘');
+        spawnLightRipple(resp.root.position);
+      }, 650);
+      broadcastEvent({ type: 'gesture', text: '🙏 아멘' });
+    });
+
+    document.getElementById('btn-peace').addEventListener('click', () => {
+      player.bowTime = 1.3;
+      showBubble(player, '🕊️ 평안을 빕니다');
+      spawnLightRipple(player.root.position);
+      audio.playSoftChime();
+
+      setTimeout(() => {
+        const resp = companions[Math.floor(Math.random() * companions.length)];
+        resp.bowTime = 1.2;
+        showBubble(resp, '🕊️ 주님의 평안이 함께하시길');
+      }, 700);
+      broadcastEvent({ type: 'gesture', text: '🕊️ 평안을 빕니다' });
+    });
+
+    document.getElementById('btn-reroll-name').addEventListener('click', () => {
+      const newName = randomName();
+      player.name = newName;
+      player.nameEl.textContent = `✨ ${newName}`;
+      document.getElementById('my-name-display').textContent = newName;
+      localStorage.setItem('chapel_my_name', newName);
+      showToast(`새로운 은혜의 이름 '${newName}'(으)로 변경되었습니다.`);
+      broadcastPresence();
+    });
+
+    // Sound Controls
+    document.getElementById('btn-sound-hymn').addEventListener('click', e => {
+      const on = audio.toggleHymn();
+      e.currentTarget.classList.toggle('active', on);
+      e.currentTarget.textContent = on ? '🎹 피아노 찬양 ON' : '🎹 피아노 찬양 OFF';
+    });
+
+    document.getElementById('btn-sound-rain').addEventListener('click', e => {
+      const on = audio.toggleRain();
+      e.currentTarget.classList.toggle('active', on);
+      e.currentTarget.textContent = on ? '🌧️ 창밖 빗소리 ON' : '🌧️ 창밖 빗소리 OFF';
+    });
+
+    document.getElementById('btn-sound-bell').addEventListener('click', () => {
+      audio.ringBell();
+      showToast('🔔 은은한 예배당 종소리가 울려 퍼집니다.');
+    });
+
+    // Time of Day Lighting Switcher
+    const timeButtons = document.querySelectorAll('[data-mode]');
+    timeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        timeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const mode = btn.getAttribute('data-mode');
+        if (mode === 'dawn') {
+          scene.background.setHex(0x13101c);
+          scene.fog.color.setHex(0x13101c);
+          ambientLight.intensity = 0.55;
+          hemiLight.intensity = 0.55;
+          crossLight.intensity = 2.1;
+          lightRayMats.forEach(m => (m.opacity = 0.065));
+        } else if (mode === 'day') {
+          scene.background.setHex(0x3a4c66);
+          scene.fog.color.setHex(0x3a4c66);
+          ambientLight.intensity = 0.95;
+          hemiLight.intensity = 0.95;
+          crossLight.intensity = 1.6;
+          lightRayMats.forEach(m => (m.opacity = 0.12));
+        } else if (mode === 'night') {
+          scene.background.setHex(0x07050a);
+          scene.fog.color.setHex(0x07050a);
+          ambientLight.intensity = 0.25;
+          hemiLight.intensity = 0.28;
+          crossLight.intensity = 2.6;
+          lightRayMats.forEach(m => (m.opacity = 0.02));
+        }
+      });
+    });
+
+    // Modals Open / Close
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+      audio.playSoftChime();
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+    document.querySelectorAll('[data-close]').forEach(btn => {
+      btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close')));
+    });
+
+    document.getElementById('btn-open-word').addEventListener('click', () => openModal('modal-word'));
+    document.getElementById('btn-open-candle').addEventListener('click', () => {
+      renderPrayerWall();
+      openModal('modal-candle');
+    });
+
+    // Word Card Modal Logic
+    let currentMood = 'peace';
+    function drawVerse(mood) {
+      const list = SCRIPTURES[mood] || SCRIPTURES.peace;
+      const item = list[Math.floor(Math.random() * list.length)];
+      document.getElementById('verse-text').textContent = item.verse;
+      document.getElementById('verse-ref').textContent = item.ref;
+      document.getElementById('verse-meditation').textContent = item.meditation;
+    }
+
+    document.querySelectorAll('.mood-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMood = btn.getAttribute('data-mood');
+        drawVerse(currentMood);
+      });
+    });
+
+    document.getElementById('btn-draw-again').addEventListener('click', () => {
+      drawVerse(currentMood);
+      audio.playSoftChime();
+    });
+
+    document.getElementById('btn-copy-verse').addEventListener('click', () => {
+      const v = document.getElementById('verse-text').textContent;
+      const r = document.getElementById('verse-ref').textContent;
+      const m = document.getElementById('verse-meditation').textContent;
+      const fullText = `[새벽빛 온라인 예배당 오늘의 말씀]\n${v}\n— ${r}\n\n${m}`;
+      navigator.clipboard?.writeText(fullText);
+      showToast('📖 오늘의 말씀 카드가 클립보드에 복사되었습니다.');
+    });
+
+    // Candle & Prayer Wall Logic
+    let totalCandles = 12;
+    function renderPrayerWall() {
+      const listEl = document.getElementById('prayer-wall-list');
+      listEl.innerHTML = '';
+      prayerNotes.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'prayer-wall-item';
+        div.innerHTML = `
+          <div>🕯️ ${item.text}</div>
+          <div class="prayer-wall-meta">
+            <span>${item.name}</span>
+            <span>${item.time}</span>
+          </div>
+        `;
+        listEl.appendChild(div);
+      });
+    }
+    renderPrayerWall();
+
+    document.getElementById('btn-submit-candle').addEventListener('click', () => {
+      const input = document.getElementById('prayer-input');
+      const text = input.value.trim() || '말없는 기도로 소망의 촛불을 밝힙니다.';
+      prayerNotes.unshift({
+        name: player.name,
+        text,
+        time: '방금 전'
+      });
+      input.value = '';
+      totalCandles++;
+      document.getElementById('candle-count').textContent = totalCandles;
+      lightNextCandle();
+      renderPrayerWall();
+      showBubble(player, '🕯️ 촛불 기도');
+      spawnLightRipple(new THREE.Vector3(4.5, 0, -7.6));
+      audio.playSoftChime();
+      showToast('🕯️ 강단 앞 소망 촛불대에 당신의 기도 등불이 켜졌습니다.');
+      broadcastEvent({ type: 'candle', text, name: player.name });
+    });
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    /**************************************************************
+     * 6.5. REAL-TIME MULTIPLAYER & INVITE SYSTEM (MQTT + BroadcastChannel)
+     **************************************************************/
+    const myPeerId = 'peer_' + Math.random().toString(36).substring(2, 10);
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentRoom = urlParams.get('room') || '본당';
+    const remotePeers = new Map(); // peerId -> { avatar, lastSeen }
+
+    function updateOnlineCountDisplay() {
+      const count = 1 + companions.length + remotePeers.size;
+      const roomLabel = currentRoom === '본당' ? '' : `[${currentRoom}] `;
+      document.getElementById('online-count').textContent = `${roomLabel}함께 기도하는 이 ${count}명`;
+    }
+    updateOnlineCountDisplay();
+
+    function getInviteUrl() {
+      const base = window.location.href.split('?')[0];
+      return currentRoom === '본당'
+        ? base
+        : `${base}?room=${encodeURIComponent(currentRoom)}`;
+    }
+
+    function updateInvitePreview() {
+      document.getElementById('room-input').value = currentRoom;
+      const link = getInviteUrl();
+      const msg = `⛪ [새벽빛 온라인 예배당 - ${currentRoom}]\n"${player.name}"님이 당신을 말없이 함께 머무는 평안의 기도 자리로 초대합니다.\n\n🕯️ 앱 설치·가입 없이 바로 입장하기:\n${link}`;
+      document.getElementById('invite-preview-text').innerText = msg;
+    }
+
+    document.getElementById('btn-open-invite').addEventListener('click', () => {
+      updateInvitePreview();
+      openModal('modal-invite');
+    });
+
+    document.getElementById('btn-change-room').addEventListener('click', () => {
+      const val = document.getElementById('room-input').value.trim() || '본당';
+      currentRoom = val;
+      const newUrl = getInviteUrl();
+      try { window.history.replaceState({}, '', newUrl); } catch (e) {}
+      connectMultiplayerRoom(currentRoom);
+      updateInvitePreview();
+      updateOnlineCountDisplay();
+      showToast(`⛪ '${currentRoom}' 예배당 방으로 이동했습니다.`);
+    });
+
+    document.getElementById('btn-copy-invite').addEventListener('click', () => {
+      updateInvitePreview();
+      const msg = document.getElementById('invite-preview-text').innerText;
+      navigator.clipboard?.writeText(msg);
+      showToast('💌 초대장과 링크가 복사되었습니다! 카카오톡이나 문자로 붙여넣어 보세요.');
+    });
+
+    // Local Tab Sync (BroadcastChannel) + Global WebSockets Sync (MQTT)
+    let bcChannel = null;
+    let mqttClient = null;
+
+    function handleIncomingMessage(data) {
+      if (!data || data.peerId === myPeerId) return;
+
+      if (data.type === 'presence') {
+        let entry = remotePeers.get(data.peerId);
+        if (!entry) {
+          const color = AVATAR_COLORS[Math.abs(data.peerId.charCodeAt(5)) % AVATAR_COLORS.length];
+          const av = createCuteAvatar(data.name || '순례자', color, false);
+          av.root.position.set(data.x || 0, 0, data.z || 6);
+          av.targetPos.set(data.tx || 0, 0, data.tz || 6);
+          entry = { avatar: av, lastSeen: Date.now() };
+          remotePeers.set(data.peerId, entry);
+          updateOnlineCountDisplay();
+          showToast(`🕊️ '${data.name}'님이 예배당에 조용히 입장하셨습니다.`);
+        }
+        entry.lastSeen = Date.now();
+        const av = entry.avatar;
+        if (av.name !== data.name) {
+          av.name = data.name;
+          av.nameEl.textContent = data.name;
+        }
+        av.targetPos.set(data.tx, 0, data.tz);
+        av.state = data.state || 'standing';
+        if (av.state === 'sitting' || av.state === 'kneeling') {
+          av.root.position.set(data.x, 0, data.z);
+          av.root.rotation.y = 0;
+        }
+      } else if (data.type === 'gesture') {
+        const entry = remotePeers.get(data.peerId);
+        if (entry) {
+          entry.avatar.bowTime = 1.3;
+          showBubble(entry.avatar, data.text);
+          spawnLightRipple(entry.avatar.root.position);
+          audio.playSoftChime();
+        }
+      } else if (data.type === 'candle') {
+        prayerNotes.unshift({
+          name: data.name || '익명의 기도자',
+          text: data.text,
+          time: '방금 전'
+        });
+        totalCandles++;
+        document.getElementById('candle-count').textContent = totalCandles;
+        lightNextCandle();
+        renderPrayerWall();
+        spawnLightRipple(new THREE.Vector3(4.5, 0, -7.6));
+      }
+    }
+
+    function broadcastRaw(payload) {
+      const msgObj = { ...payload, peerId: myPeerId, room: currentRoom };
+      if (bcChannel) {
+        try { bcChannel.postMessage(msgObj); } catch (e) {}
+      }
+      if (mqttClient && mqttClient.connected) {
+        try {
+          mqttClient.publish(`dawnchapel/v1/${currentRoom}`, JSON.stringify(msgObj));
+        } catch (e) {}
+      }
+    }
+
+    function broadcastPresence() {
+      broadcastRaw({
+        type: 'presence',
+        name: player.name,
+        x: Number(player.root.position.x.toFixed(2)),
+        z: Number(player.root.position.z.toFixed(2)),
+        tx: Number(player.targetPos.x.toFixed(2)),
+        tz: Number(player.targetPos.z.toFixed(2)),
+        state: player.state
+      });
+    }
+
+    function broadcastEvent(evt) {
+      broadcastRaw(evt);
+    }
+
+    function connectMultiplayerRoom(roomName) {
+      // Clear old remote avatars when switching rooms
+      remotePeers.forEach(entry => {
+        scene.remove(entry.avatar.root);
+        entry.avatar.labelEl.remove();
+      });
+      remotePeers.clear();
+      updateOnlineCountDisplay();
+
+      if (bcChannel) bcChannel.close();
+      if ('BroadcastChannel' in window) {
+        bcChannel = new BroadcastChannel(`dawnchapel_room_${roomName}`);
+        bcChannel.onmessage = ev => handleIncomingMessage(ev.data);
+      }
+
+      if (window.mqtt) {
+        if (mqttClient) {
+          try { mqttClient.end(true); } catch (e) {}
+        }
+        mqttClient = window.mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+          clientId: myPeerId,
+          clean: true,
+          connectTimeout: 5000,
+          reconnectPeriod: 4000
+        });
+        const topic = `dawnchapel/v1/${roomName}`;
+        mqttClient.on('connect', () => {
+          mqttClient.subscribe(topic);
+          broadcastPresence();
+        });
+        mqttClient.on('message', (_t, message) => {
+          try {
+            handleIncomingMessage(JSON.parse(message.toString()));
+          } catch (e) {}
+        });
+      }
+      broadcastPresence();
+    }
+
+    connectMultiplayerRoom(currentRoom);
+    setInterval(broadcastPresence, 1800);
+
+    // Clean up disconnected peers after 12 seconds of inactivity
+    setInterval(() => {
+      const now = Date.now();
+      let changed = false;
+      remotePeers.forEach((entry, pid) => {
+        if (now - entry.lastSeen > 12000) {
+          scene.remove(entry.avatar.root);
+          entry.avatar.labelEl.remove();
+          remotePeers.delete(pid);
+          changed = true;
+        }
+      });
+      if (changed) updateOnlineCountDisplay();
+    }, 4000);
+
+    /**************************************************************
+     * 7. ANIMATION LOOP (CHARACTERS, CANDLES, CAMERA, LABELS)
+     **************************************************************/
+    const clock = new THREE.Clock();
+
+    function updateAvatarAnimation(av, dt, elapsed) {
+      if (av.state === 'walking') {
+        const diff = new THREE.Vector3().subVectors(av.targetPos, av.root.position);
+        diff.y = 0;
+        const dist = diff.length();
+        if (dist < 0.12) {
+          if (av.targetSeat) {
+            engageSeat(av.targetSeat);
+          } else {
+            av.state = 'standing';
+          }
+        } else {
+          const speed = 3.1;
+          diff.normalize();
+          av.root.position.addScaledVector(diff, Math.min(dist, speed * dt));
+          const targetAngle = Math.atan2(diff.x, diff.z) + Math.PI;
+          av.root.rotation.y = targetAngle;
+
+          av.walkPhase += dt * 11;
+          av.bodyGroup.position.y = Math.abs(Math.sin(av.walkPhase)) * 0.08;
+          av.handL.position.set(-0.24, 0.45, Math.sin(av.walkPhase) * 0.12);
+          av.handR.position.set(0.24, 0.45, -Math.sin(av.walkPhase) * 0.12);
+        }
+      } else if (av.state === 'sitting') {
+        av.bodyGroup.position.y = 0.18 + Math.sin(elapsed * 2 + av.walkPhase) * 0.012;
+        av.handL.position.set(-0.07, 0.46, -0.24);
+        av.handR.position.set(0.07, 0.46, -0.24);
+        av.headGroup.rotation.x = 0.22; // Head gently bowed in prayer
+      } else if (av.state === 'kneeling') {
+        av.bodyGroup.position.y = -0.14 + Math.sin(elapsed * 2 + av.walkPhase) * 0.01;
+        av.handL.position.set(-0.06, 0.52, -0.25);
+        av.handR.position.set(0.06, 0.52, -0.25);
+        av.headGroup.rotation.x = 0.32;
+      } else {
+        // Standing idle
+        av.bodyGroup.position.y = Math.sin(elapsed * 2.2 + av.walkPhase) * 0.018;
+        av.handL.position.set(-0.22, 0.46, -0.1);
+        av.handR.position.set(0.22, 0.46, -0.1);
+        av.headGroup.rotation.x = 0;
+      }
+
+      // Bow animation on Amen / Peace
+      if (av.bowTime > 0) {
+        av.bowTime = Math.max(0, av.bowTime - dt * 1.8);
+        av.headGroup.rotation.x += Math.sin(av.bowTime * Math.PI) * 0.45;
+      }
+
+      // Project 3D position to 2D screen coordinates for floating name label
+      const headWorld = av.root.position.clone();
+      headWorld.y += av.state === 'kneeling' ? 1.25 : 1.52;
+      headWorld.project(camera);
+
+      if (headWorld.z < 1) {
+        const x = (headWorld.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-(headWorld.y * 0.5) + 0.5) * window.innerHeight;
+        av.labelEl.style.left = `${x}px`;
+        av.labelEl.style.top = `${y}px`;
+        av.labelEl.style.opacity = '1';
+      } else {
+        av.labelEl.style.opacity = '0';
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.1);
+      const elapsed = clock.getElapsedTime();
+
+      // WASD / Arrow Keyboard Movement
+      let moveX = 0;
+      let moveZ = 0;
+      if (keys.KeyW || keys.ArrowUp) moveZ -= 1;
+      if (keys.KeyS || keys.ArrowDown) moveZ += 1;
+      if (keys.KeyA || keys.ArrowLeft) moveX -= 1;
+      if (keys.KeyD || keys.ArrowRight) moveX += 1;
+
+      if (moveX !== 0 || moveZ !== 0) {
+        const moveVec = new THREE.Vector3(moveX, 0, moveZ).normalize();
+        moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), camYaw);
+        player.root.position.x = Math.max(-8.2, Math.min(8.2, player.root.position.x + moveVec.x * 3.2 * dt));
+        player.root.position.z = Math.max(-5.8, Math.min(9.2, player.root.position.z + moveVec.z * 3.2 * dt));
+        player.targetPos.copy(player.root.position);
+        player.root.rotation.y = Math.atan2(moveVec.x, moveVec.z) + Math.PI;
+        player.walkPhase += dt * 11;
+        player.bodyGroup.position.y = Math.abs(Math.sin(player.walkPhase)) * 0.08;
+      }
+
+      // Update Player, Companion & Remote Real-Time Avatars
+      updateAvatarAnimation(player, dt, elapsed);
+      companions.forEach(c => updateAvatarAnimation(c, dt, elapsed));
+      remotePeers.forEach(entry => updateAvatarAnimation(entry.avatar, dt, elapsed));
+
+      // Flicker Candle Flames & Warm Cross Glow
+      flameMeshes.forEach((f, idx) => {
+        if (f.visible) {
+          const s = 0.92 + Math.sin(elapsed * 9 + idx * 1.7) * 0.12;
+          f.scale.set(s, 0.9 + Math.cos(elapsed * 11 + idx) * 0.15, s);
+        }
+      });
+      crossLight.intensity = 2.0 + Math.sin(elapsed * 2.5) * 0.18;
+
+      // Gently Float Dust Particles
+      const posArr = particles.geometry.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        posArr[i * 3 + 1] += Math.sin(elapsed + i) * 0.0025;
+      }
+      particles.geometry.attributes.position.needsUpdate = true;
+
+      // Update Expanding Light Ripples
+      for (let i = activeRipples.length - 1; i >= 0; i--) {
+        const r = activeRipples[i];
+        r.age += dt * 1.6;
+        const scale = 1 + r.age * 4.2;
+        r.mesh.scale.set(scale, scale, 1);
+        r.mesh.material.opacity = Math.max(0, 0.85 * (1 - r.age));
+        if (r.age >= 1) {
+          scene.remove(r.mesh);
+          activeRipples.splice(i, 1);
+        }
+      }
+
+      // Smooth 3rd-Person Camera Follow
+      const focusTarget = player.root.position.clone();
+      focusTarget.y += (player.state === 'sitting' || player.state === 'kneeling') ? 1.15 : 1.05;
+      if (player.state === 'sitting' || player.state === 'kneeling') {
+        // Shift gaze slightly toward the front glowing Cross when praying
+        focusTarget.z -= 1.1;
+      }
+
+      const desiredCamPos = new THREE.Vector3(
+        focusTarget.x + Math.sin(camYaw) * Math.cos(camPitch) * camDist,
+        focusTarget.y + Math.sin(camPitch) * camDist,
+        focusTarget.z + Math.cos(camYaw) * Math.cos(camPitch) * camDist
+      );
+      camera.position.lerp(desiredCamPos, 0.12);
+      camera.lookAt(focusTarget.x, focusTarget.y + 0.15, focusTarget.z - 0.8);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

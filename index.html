@@ -615,6 +615,13 @@
     </div>
 
     <div class="right-controls">
+      <!-- Zone Navigation (본당 / 로비 / 외부정원) -->
+      <div class="glass-panel control-row">
+        <span style="font-size:11px; color:var(--gold); padding:0 4px; font-weight:600;">📍 공간이동</span>
+        <button class="chip-btn active" data-zone="sanctuary">⛪ 예배당 본당</button>
+        <button class="chip-btn" data-zone="lobby">☕ 은혜 로비</button>
+        <button class="chip-btn" data-zone="garden">🌿 외부 기도정원</button>
+      </div>
       <!-- Time of Day Switcher -->
       <div class="glass-panel control-row">
         <button class="chip-btn active" data-mode="dawn">🌅 새벽기도</button>
@@ -659,6 +666,9 @@
       </button>
       <button class="action-btn" id="btn-open-word">
         <span>📖 오늘의 말씀 뽑기</span>
+      </button>
+      <button class="action-btn" id="btn-open-guestbook">
+        <span>📝 로비 방명록</span>
       </button>
     </div>
   </footer>
@@ -744,6 +754,22 @@
         <strong style="color:var(--gold-soft);">💡 내 컴퓨터 밖의 지인에게 링크를 보내려면?</strong><br/>
         현재 파일이 내 PC(<code>C:\...</code>)에 열려 있다면, <a href="https://app.netlify.com/drop" target="_blank" style="color:var(--gold); text-decoration:underline;">Netlify Drop</a> 페이지에 이 <code>온라인예배당</code> 폴더를 마우스로 끌어다 놓기만 하면 <strong>10초 만에 무료 인터넷 주소(https://...)</strong>가 만들어져 카톡으로 누구나 접속할 수 있습니다! (같은 PC에서 새 탭으로 열어도 즉시 서로 만납니다)
       </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Lobby Fellowship Guestbook & Bulletin -->
+  <div class="modal-backdrop" id="modal-guestbook">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-guestbook">✕</button>
+      <div class="modal-title">☕ 은혜 로비 방명록 & 주보</div>
+      <div class="modal-desc">
+        예배당 로비에 오신 것을 환영합니다! 함께 예배당을 찾은 분들과 따뜻한 안부나 감사의 인사를 나누어 보세요.
+      </div>
+
+      <input type="text" id="guestbook-input" class="prayer-input" maxlength="65" placeholder="예) 오늘도 평안한 하루 보내시길 축복합니다! 반가워요 :)" />
+      <button class="full-btn" id="btn-submit-guestbook">📝 로비 방명록에 인사 남기기</button>
+
+      <div class="prayer-wall-list" id="guestbook-list"></div>
     </div>
   </div>
 
@@ -1301,6 +1327,7 @@
           seatSpots.push({
             id: `pew-${rIdx}-${sIdx}-${spotIdx}`,
             type: 'pew',
+            rotationY: 0,
             position: new THREE.Vector3(xCenter + offsetX, 0, zPos - 0.05),
             occupiedBy: null
           });
@@ -1308,14 +1335,278 @@
       });
     });
 
-    // Floating Dust Motes / Warm Light Particles
-    const particleCount = 120;
+    /**************************************************************
+     * 3.5. ZONE 2: 은혜 로비 / 친교실 (LOBBY, z = 7.8 ~ 17.5)
+     **************************************************************/
+    // Archway Partition between Sanctuary and Lobby (z = 7.8)
+    [-6.6, 6.6].forEach(xPos => {
+      const partWall = new THREE.Mesh(new THREE.BoxGeometry(6.8, 9.6, 0.45), wallMat);
+      partWall.position.set(xPos, 4.8, 7.8);
+      partWall.castShadow = true;
+      partWall.receiveShadow = true;
+      chapelGroup.add(partWall);
+    });
+    const archHeader = new THREE.Mesh(new THREE.BoxGeometry(6.8, 2.6, 0.5), woodDarkMat);
+    archHeader.position.set(0, 8.3, 7.8);
+    chapelGroup.add(archHeader);
+
+    // Lobby Floor & Side Walls (z = 7.8 ~ 17.5)
+    const lobbyFloorMat = new THREE.MeshStandardMaterial({ color: 0x594230, roughness: 0.5 });
+    const lobbyFloor = new THREE.Mesh(new THREE.PlaneGeometry(20, 10.5), lobbyFloorMat);
+    lobbyFloor.rotation.x = -Math.PI / 2;
+    lobbyFloor.position.set(0, 0.005, 12.8);
+    lobbyFloor.receiveShadow = true;
+    chapelGroup.add(lobbyFloor);
+
+    const lobbyRunner = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.03, 10.5), carpetMat);
+    lobbyRunner.position.set(0, 0.018, 12.8);
+    lobbyRunner.receiveShadow = true;
+    chapelGroup.add(lobbyRunner);
+
+    const lobbyLeftWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 8.5, 10.5), wallMat);
+    lobbyLeftWall.position.set(-10, 4.25, 12.8);
+    chapelGroup.add(lobbyLeftWall);
+
+    const lobbyRightWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 8.5, 10.5), wallMat);
+    lobbyRightWall.position.set(10, 4.25, 12.8);
+    chapelGroup.add(lobbyRightWall);
+
+    const lobbyLight = new THREE.PointLight(0xffd494, 1.35, 18);
+    lobbyLight.position.set(0, 6.5, 12.8);
+    scene.add(lobbyLight);
+
+    // Lobby Left: Welcome & Guestbook Desk (안내 및 방명록 데스크, x = -4.8, z = 12.2)
+    const deskGroup = new THREE.Group();
+    const deskBody = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.05, 1.0), woodMedMat);
+    deskBody.position.y = 0.525;
+    deskBody.castShadow = true;
+    const deskTop = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.1, 1.15), woodLightMat);
+    deskTop.position.y = 1.08;
+    const guestbookMesh = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.06, 0.4), bibleMat);
+    guestbookMesh.position.set(0.3, 1.15, 0.1);
+    const miniCross = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.55, 0.1), goldMat);
+    miniCross.position.set(-0.7, 1.38, -0.15);
+    const miniCrossH = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.1, 0.1), goldMat);
+    miniCrossH.position.set(-0.7, 1.46, -0.15);
+    deskGroup.add(deskBody, deskTop, guestbookMesh, miniCross, miniCrossH);
+    deskGroup.position.set(-4.8, 0, 12.2);
+    chapelGroup.add(deskGroup);
+
+    // Lobby Right: Fellowship Tea Table & Lounge Chairs (친교 다과 테이블, x = 4.8, z = 12.5)
+    const cafeGroup = new THREE.Group();
+    const teaTable = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.08, 24), woodLightMat);
+    teaTable.position.y = 0.72;
+    teaTable.castShadow = true;
+    const teaPedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.45, 0.72, 16), woodDarkMat);
+    teaPedestal.position.y = 0.36;
+    cafeGroup.add(teaTable, teaPedestal);
+
+    // Teacups on table
+    [[-0.35, -0.2], [0.35, 0.25], [-0.2, 0.4]].forEach(([tx, tz]) => {
+      const cup = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.09, 0.07, 0.14, 12),
+        new THREE.MeshStandardMaterial({ color: 0xfff6e5 })
+      );
+      cup.position.set(tx, 0.82, tz);
+      cafeGroup.add(cup);
+    });
+    cafeGroup.position.set(4.8, 0, 12.5);
+    chapelGroup.add(cafeGroup);
+
+    // 4 Lounge Chairs around Fellowship Table
+    const loungeOffsets = [
+      { dx: -1.65, dz: 0, rot: -Math.PI / 2 },
+      { dx: 1.65, dz: 0, rot: Math.PI / 2 },
+      { dx: 0, dz: -1.65, rot: Math.PI },
+      { dx: 0, dz: 1.65, rot: 0 }
+    ];
+    loungeOffsets.forEach((cfg, idx) => {
+      const chair = new THREE.Group();
+      const cSeat = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.38, 0.48, 16), cushionMat);
+      cSeat.position.y = 0.24;
+      cSeat.castShadow = true;
+      chair.add(cSeat);
+      chair.position.set(4.8 + cfg.dx, 0, 12.5 + cfg.dz);
+      chapelGroup.add(chair);
+
+      seatSpots.push({
+        id: `lobby-chair-${idx}`,
+        type: 'lobby',
+        rotationY: cfg.rot,
+        position: new THREE.Vector3(4.8 + cfg.dx, 0, 12.5 + cfg.dz),
+        occupiedBy: null
+      });
+    });
+
+    // Chapel Front Exterior Facade & Entrance Arch at z = 17.5
+    [-6.6, 6.6].forEach(xPos => {
+      const extWall = new THREE.Mesh(new THREE.BoxGeometry(6.8, 8.8, 0.55), wallMat);
+      extWall.position.set(xPos, 4.4, 17.5);
+      extWall.castShadow = true;
+      extWall.receiveShadow = true;
+      chapelGroup.add(extWall);
+    });
+    const entranceHeader = new THREE.Mesh(new THREE.BoxGeometry(6.8, 3.0, 0.65), woodDarkMat);
+    entranceHeader.position.set(0, 7.5, 17.5);
+    chapelGroup.add(entranceHeader);
+
+    // Bell Tower & Exterior Glowing Cross above Entrance (z = 17.5)
+    const steeple = new THREE.Mesh(new THREE.BoxGeometry(3.2, 4.2, 2.2), wallMat);
+    steeple.position.set(0, 10.6, 17.4);
+    const steepleRoof = new THREE.Mesh(new THREE.ConeGeometry(2.4, 2.8, 4), woodDarkMat);
+    steepleRoof.position.set(0, 14.1, 17.4);
+    steepleRoof.rotation.y = Math.PI / 4;
+    const extCrossV = new THREE.Mesh(new THREE.BoxGeometry(0.26, 2.1, 0.2), goldMat);
+    extCrossV.position.set(0, 16.2, 17.4);
+    const extCrossH = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.26, 0.2), goldMat);
+    extCrossH.position.set(0, 16.5, 17.4);
+    chapelGroup.add(steeple, steepleRoof, extCrossV, extCrossH);
+
+    /**************************************************************
+     * 3.6. ZONE 3: 감람나무 외부 기도정원 (OUTDOOR GARDEN, z = 17.5 ~ 38)
+     **************************************************************/
+    const grassMat = new THREE.MeshStandardMaterial({ color: 0x223824, roughness: 0.92 });
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x8c857b, roughness: 0.82 });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x3f6a42, roughness: 0.78 });
+    const oliveLeafMat = new THREE.MeshStandardMaterial({ color: 0x587d52, roughness: 0.7 });
+
+    const gardenGround = new THREE.Mesh(new THREE.PlaneGeometry(54, 26), grassMat);
+    gardenGround.rotation.x = -Math.PI / 2;
+    gardenGround.position.set(0, -0.01, 29.5);
+    gardenGround.receiveShadow = true;
+    chapelGroup.add(gardenGround);
+
+    // Stone Walkway & Circular Olive Tree Plaza
+    const stonePath = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.04, 19), stoneMat);
+    stonePath.position.set(0, 0.01, 27.0);
+    stonePath.receiveShadow = true;
+    chapelGroup.add(stonePath);
+
+    const plazaCircle = new THREE.Mesh(new THREE.CylinderGeometry(5.8, 5.8, 0.05, 32), stoneMat);
+    plazaCircle.position.set(0, 0.015, 27.0);
+    plazaCircle.receiveShadow = true;
+    chapelGroup.add(plazaCircle);
+
+    // Great Olive Tree of Prayer at Center of Garden Plaza (x = 0, z = 27.0)
+    const oliveTreeGroup = new THREE.Group();
+    const planterRing = new THREE.Mesh(new THREE.CylinderGeometry(1.75, 1.9, 0.52, 24), stoneMat);
+    planterRing.position.y = 0.26;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.62, 3.2, 12), woodDarkMat);
+    trunk.position.y = 1.7;
+    trunk.castShadow = true;
+    oliveTreeGroup.add(planterRing, trunk);
+
+    // Olive Foliage Canopy Spheres
+    const canopyCoords = [
+      [0, 3.8, 0, 1.65],
+      [-1.2, 3.4, 0.6, 1.25],
+      [1.2, 3.4, -0.5, 1.25],
+      [-0.7, 3.5, -1.1, 1.15],
+      [0.8, 3.5, 1.1, 1.15]
+    ];
+    canopyCoords.forEach(([cx, cy, cz, r]) => {
+      const foliage = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 14), oliveLeafMat);
+      foliage.position.set(cx, cy, cz);
+      foliage.castShadow = true;
+      oliveTreeGroup.add(foliage);
+    });
+
+    // Hanging Prayer Lanterns on the Olive Tree
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2;
+      const lx = Math.cos(ang) * 1.65;
+      const lz = Math.sin(ang) * 1.65;
+      const lantern = new THREE.Mesh(
+        new THREE.SphereGeometry(0.11, 10, 10),
+        new THREE.MeshBasicMaterial({ color: 0xffe08c })
+      );
+      lantern.position.set(lx, 2.55 + (i % 2) * 0.25, lz);
+      oliveTreeGroup.add(lantern);
+      flameMeshes.push(lantern);
+    }
+
+    const gardenTreeLight = new THREE.PointLight(0xffcb75, 1.8, 16);
+    gardenTreeLight.position.set(0, 3.2, 27.0);
+    scene.add(gardenTreeLight);
+
+    oliveTreeGroup.position.set(0, 0, 27.0);
+    chapelGroup.add(oliveTreeGroup);
+
+    // Living Water Pond on Left of Garden (생명수 연못, x = -7.8, z = 26.5)
+    const pondMat = new THREE.MeshStandardMaterial({
+      color: 0x2b6e7d,
+      emissive: 0x103440,
+      emissiveIntensity: 0.4,
+      roughness: 0.15,
+      metalness: 0.35
+    });
+    const pondBorder = new THREE.Mesh(new THREE.CylinderGeometry(3.3, 3.5, 0.14, 24), stoneMat);
+    pondBorder.position.set(-7.8, 0.06, 26.5);
+    const pondWater = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.0, 0.16, 24), pondMat);
+    pondWater.position.set(-7.8, 0.07, 26.5);
+    chapelGroup.add(pondBorder, pondWater);
+
+    // 4 Wooden Garden Benches around the Olive Tree Plaza
+    const gardenBenchConfigs = [
+      { x: -4.2, z: 24.2, rot: Math.PI / 4 },
+      { x: 4.2, z: 24.2, rot: -Math.PI / 4 },
+      { x: -4.2, z: 29.8, rot: (Math.PI * 3) / 4 },
+      { x: 4.2, z: 29.8, rot: -(Math.PI * 3) / 4 }
+    ];
+    gardenBenchConfigs.forEach((cfg, idx) => {
+      const bGroup = new THREE.Group();
+      const bSeat = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.1, 0.58), woodLightMat);
+      bSeat.position.y = 0.46;
+      bSeat.castShadow = true;
+      const bBack = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.52, 0.09), woodMedMat);
+      bBack.position.set(0, 0.74, 0.25);
+      const bLegL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.46, 0.54), woodDarkMat);
+      bLegL.position.set(-0.8, 0.23, 0);
+      const bLegR = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.46, 0.54), woodDarkMat);
+      bLegR.position.set(0.8, 0.23, 0);
+      bGroup.add(bSeat, bBack, bLegL, bLegR);
+      bGroup.position.set(cfg.x, 0, cfg.z);
+      bGroup.rotation.y = cfg.rot;
+      chapelGroup.add(bGroup);
+
+      seatSpots.push({
+        id: `garden-bench-${idx}`,
+        type: 'garden',
+        rotationY: cfg.rot,
+        position: new THREE.Vector3(cfg.x, 0, cfg.z),
+        occupiedBy: null
+      });
+    });
+
+    // Surrounding Cypress/Pine Trees & Bollard Lamps in the Garden
+    const treePositions = [
+      [-12, 21], [-14, 26], [-12, 32], [-7, 35],
+      [11, 21], [13, 26], [11, 32], [7, 35],
+      [-5, 20], [5, 20]
+    ];
+    treePositions.forEach(([tx, tz]) => {
+      const tGroup = new THREE.Group();
+      const tTrunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 1.4, 8), woodDarkMat);
+      tTrunk.position.y = 0.7;
+      const tCone1 = new THREE.Mesh(new THREE.ConeGeometry(1.25, 2.8, 10), leafMat);
+      tCone1.position.y = 2.2;
+      tCone1.castShadow = true;
+      const tCone2 = new THREE.Mesh(new THREE.ConeGeometry(0.95, 2.4, 10), leafMat);
+      tCone2.position.y = 3.5;
+      tCone2.castShadow = true;
+      tGroup.add(tTrunk, tCone1, tCone2);
+      tGroup.position.set(tx, 0, tz);
+      chapelGroup.add(tGroup);
+    });
+
+    // Floating Dust Motes & Garden Fireflies
+    const particleCount = 220;
     const pGeom = new THREE.BufferGeometry();
     const pPositions = new Float32Array(particleCount * 3);
     for (let i = 0; i < particleCount; i++) {
-      pPositions[i * 3] = (Math.random() - 0.5) * 17;
-      pPositions[i * 3 + 1] = 0.6 + Math.random() * 7.5;
-      pPositions[i * 3 + 2] = -10 + Math.random() * 18;
+      pPositions[i * 3] = (Math.random() - 0.5) * 26;
+      pPositions[i * 3 + 1] = 0.5 + Math.random() * 7.0;
+      pPositions[i * 3 + 2] = -10 + Math.random() * 46;
     }
     pGeom.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
     const pMat = new THREE.PointsMaterial({
@@ -1461,7 +1752,7 @@
     player.root.position.set(0, 0, 7.2);
     player.targetPos.copy(player.root.position);
 
-    // Create Silent Companion Worshippers (무언의 동역자들)
+    // Create Silent Companion Worshippers (무언의 동역자들: 본당 + 로비 + 정원)
     const companions = [];
     const companionConfigs = [
       { name: '고요한 감람나무', color: 0x8fa882, seatIdx: 1 },
@@ -1469,7 +1760,9 @@
       { name: '온유한 백합화', color: 0xc77d7d, seatIdx: 9 },
       { name: '기도하는 순례자', color: 0xb896c8, seatIdx: 12 },
       { name: '따뜻한 작은등불', color: 0xd4b475, seatIdx: 18 },
-      { name: '맑은샘 청지기', color: 0x6fa3a0, seatIdx: 21 }
+      { name: '맑은샘 청지기', color: 0x6fa3a0, seatIdx: 21 },
+      { name: '은혜로운 포도나무', color: 0xd99b66, seatIdx: 28 }, // Lobby lounge
+      { name: '찬양하는 시냇가', color: 0x8fa882, seatIdx: 33 }    // Outdoor Garden bench
     ];
 
     companionConfigs.forEach(cfg => {
@@ -1480,6 +1773,7 @@
         comp.currentSeat = seat;
         comp.state = seat.type === 'kneel' ? 'kneeling' : 'sitting';
         comp.root.position.copy(seat.position);
+        comp.root.rotation.y = seat.rotationY || 0;
         comp.targetPos.copy(seat.position);
       }
       companions.push(comp);
@@ -1565,15 +1859,22 @@
           openModal('modal-word');
           return;
         }
-        // Near Candle Stand?
-        if (pt.distanceTo(new THREE.Vector3(4.5, 1.2, -7.6)) < 2.0) {
+        // Near Candle Stand or Outdoor Olive Prayer Tree?
+        if (pt.distanceTo(new THREE.Vector3(4.5, 1.2, -7.6)) < 2.0 || pt.distanceTo(new THREE.Vector3(0, 1.5, 27.0)) < 2.4) {
+          renderPrayerWall();
           openModal('modal-candle');
           return;
         }
+        // Near Lobby Welcome & Guestbook Desk?
+        if (pt.distanceTo(new THREE.Vector3(-4.8, 1.0, 12.2)) < 2.2) {
+          renderGuestbook();
+          openModal('modal-guestbook');
+          return;
+        }
 
-        // Near an available Pew or Kneeling spot?
+        // Near an available Pew, Kneeling spot, Lobby chair, or Garden bench?
         let nearestSeat = null;
-        let minSeatDist = 1.25;
+        let minSeatDist = 1.35;
         seatSpots.forEach(s => {
           if (!s.occupiedBy || s.occupiedBy === player) {
             const d = new THREE.Vector2(pt.x - s.position.x, pt.z - s.position.z).length();
@@ -1589,15 +1890,17 @@
           return;
         }
 
-        // Otherwise walk to floor point within bounds
+        // Otherwise walk to floor/garden point within bounds
         standUpPlayer();
+        const maxX = pt.z > 17.5 ? 15.0 : 8.5;
         player.targetPos.set(
-          Math.max(-8.2, Math.min(8.2, pt.x)),
+          Math.max(-maxX, Math.min(maxX, pt.x)),
           0,
-          Math.max(-5.8, Math.min(9.2, pt.z))
+          Math.max(-5.8, Math.min(36.0, pt.z))
         );
         player.state = 'walking';
         spawnLightRipple(player.targetPos);
+        broadcastPresence();
       }
     }
 
@@ -1610,6 +1913,7 @@
       player.targetPos.copy(seat.position);
       player.state = 'walking';
       spawnLightRipple(seat.position);
+      broadcastPresence();
     }
 
     function engageSeat(seat) {
@@ -1617,18 +1921,24 @@
       seat.occupiedBy = player;
       player.targetSeat = null;
       player.root.position.copy(seat.position);
-      player.root.rotation.y = 0; // Face the front Cross
+      player.root.rotation.y = seat.rotationY || 0;
       player.state = seat.type === 'kneel' ? 'kneeling' : 'sitting';
 
-      // Smoothly orient camera toward front Cross
-      camYaw = 0;
+      // Smoothly orient camera
+      camYaw = seat.rotationY || 0;
       camPitch = 0.25;
 
       const banner = document.getElementById('prayer-status-banner');
       const postureText = document.getElementById('prayer-posture-text');
-      postureText.textContent = seat.type === 'kneel'
-        ? '🙇 강단 앞 기도석에서 무릎 꿇고 간절히 기도 중입니다'
-        : '🪑 나무 장의자에 앉아 십자가를 바라보며 기도 중입니다';
+      if (seat.type === 'kneel') {
+        postureText.textContent = '🙇 강단 앞 기도석에서 무릎 꿇고 간절히 기도 중입니다';
+      } else if (seat.type === 'lobby') {
+        postureText.textContent = '☕ 은혜 로비 다과 테이블에 앉아 평안히 쉬어가는 중입니다';
+      } else if (seat.type === 'garden') {
+        postureText.textContent = '🌿 감람나무 정원 벤치에 앉아 자연 속에서 묵상 중입니다';
+      } else {
+        postureText.textContent = '🪑 나무 장의자에 앉아 십자가를 바라보며 기도 중입니다';
+      }
       banner.classList.add('visible');
 
       if (!prayerInterval) {
@@ -1790,6 +2100,90 @@
     document.getElementById('btn-open-candle').addEventListener('click', () => {
       renderPrayerWall();
       openModal('modal-candle');
+    });
+
+    // Zone Switcher (본당 / 은혜 로비 / 외부 기도정원 빠른 이동)
+    const zoneButtons = document.querySelectorAll('[data-zone]');
+    function updateActiveZoneUI(zPos) {
+      const currentZZone = zPos > 17.5 ? 'garden' : zPos > 7.8 ? 'lobby' : 'sanctuary';
+      zoneButtons.forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-zone') === currentZZone);
+      });
+    }
+
+    zoneButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const zone = btn.getAttribute('data-zone');
+        standUpPlayer();
+        if (zone === 'sanctuary') {
+          player.root.position.set(0, 0, 5.5);
+          player.targetPos.set(0, 0, 1.5);
+          player.state = 'walking';
+          camYaw = 0;
+          showToast('⛪ 예배당 본당으로 들어왔습니다.');
+        } else if (zone === 'lobby') {
+          player.root.position.set(0, 0, 14.2);
+          player.targetPos.set(0, 0, 12.5);
+          player.state = 'walking';
+          camYaw = 0;
+          showToast('☕ 은혜 로비(친교실)로 이동했습니다. 안내 데스크와 다과 테이블을 이용해 보세요.');
+        } else if (zone === 'garden') {
+          player.root.position.set(0, 0, 21.5);
+          player.targetPos.set(0, 0, 24.5);
+          player.state = 'walking';
+          camYaw = Math.PI;
+          showToast('🌿 감람나무 외부 기도정원으로 나왔습니다. 소망의 나무와 연못 벤치에서 쉬어가세요.');
+        }
+        updateActiveZoneUI(player.root.position.z);
+        broadcastPresence();
+      });
+    });
+
+    // Lobby Guestbook Logic
+    const guestbookNotes = [
+      { name: '은혜로운 포도나무', text: '로비 다과 공간이 참 따뜻하네요. 모두 평안한 하루 보내세요!', time: '방금 전' },
+      { name: '찬양하는 시냇가', text: '외부 감람나무 정원 벤치에서 기도하고 본당으로 들어갑니다 🙏', time: '4분 전' },
+      { name: '고요한 감람나무', text: '오늘도 새벽빛 예배당에서 큰 위로 받고 갑니다.', time: '10분 전' }
+    ];
+
+    function renderGuestbook() {
+      const listEl = document.getElementById('guestbook-list');
+      if (!listEl) return;
+      listEl.innerHTML = '';
+      guestbookNotes.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'prayer-wall-item';
+        div.innerHTML = `
+          <div>☕ ${item.text}</div>
+          <div class="prayer-wall-meta">
+            <span>${item.name}</span>
+            <span>${item.time}</span>
+          </div>
+        `;
+        listEl.appendChild(div);
+      });
+    }
+    renderGuestbook();
+
+    document.getElementById('btn-open-guestbook').addEventListener('click', () => {
+      renderGuestbook();
+      openModal('modal-guestbook');
+    });
+
+    document.getElementById('btn-submit-guestbook').addEventListener('click', () => {
+      const input = document.getElementById('guestbook-input');
+      const text = input.value.trim() || '주님의 이름으로 사랑하고 축복합니다!';
+      guestbookNotes.unshift({
+        name: player.name,
+        text,
+        time: '방금 전'
+      });
+      input.value = '';
+      renderGuestbook();
+      showBubble(player, '☕ 반가워요!');
+      audio.playSoftChime();
+      showToast('📝 은혜 로비 방명록에 따뜻한 인사가 등록되었습니다.');
+      broadcastEvent({ type: 'guestbook', text, name: player.name });
     });
 
     // Word Card Modal Logic
@@ -1974,6 +2368,13 @@
         lightNextCandle();
         renderPrayerWall();
         spawnLightRipple(new THREE.Vector3(4.5, 0, -7.6));
+      } else if (data.type === 'guestbook') {
+        guestbookNotes.unshift({
+          name: data.name || '순례자',
+          text: data.text,
+          time: '방금 전'
+        });
+        renderGuestbook();
       }
     }
 
@@ -2146,13 +2547,16 @@
       if (moveX !== 0 || moveZ !== 0) {
         const moveVec = new THREE.Vector3(moveX, 0, moveZ).normalize();
         moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), camYaw);
-        player.root.position.x = Math.max(-8.2, Math.min(8.2, player.root.position.x + moveVec.x * 3.2 * dt));
-        player.root.position.z = Math.max(-5.8, Math.min(9.2, player.root.position.z + moveVec.z * 3.2 * dt));
+        const maxX = player.root.position.z > 17.5 ? 15.0 : 8.5;
+        player.root.position.x = Math.max(-maxX, Math.min(maxX, player.root.position.x + moveVec.x * 3.5 * dt));
+        player.root.position.z = Math.max(-5.8, Math.min(36.0, player.root.position.z + moveVec.z * 3.5 * dt));
         player.targetPos.copy(player.root.position);
         player.root.rotation.y = Math.atan2(moveVec.x, moveVec.z) + Math.PI;
         player.walkPhase += dt * 11;
         player.bodyGroup.position.y = Math.abs(Math.sin(player.walkPhase)) * 0.08;
       }
+
+      updateActiveZoneUI(player.root.position.z);
 
       // Update Player, Companion & Remote Real-Time Avatars
       updateAvatarAnimation(player, dt, elapsed);

@@ -575,20 +575,201 @@
       transform: translateX(-50%) translateY(0);
     }
 
-    @media (max-width: 680px) {
+    /* Mobile Top Actions & UI Hide Button */
+    .mobile-top-actions {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    .mobile-menu-btn,
+    .ui-hide-btn {
+      background: rgba(243, 200, 120, 0.18);
+      border: 1px solid rgba(243, 200, 120, 0.45);
+      color: var(--gold-soft);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 99px;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .mobile-menu-btn:hover,
+    .ui-hide-btn:hover {
+      background: rgba(243, 200, 120, 0.32);
+    }
+
+    #btn-restore-ui {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 25;
+      background: rgba(24, 18, 14, 0.82);
+      border: 1px solid rgba(243, 200, 120, 0.55);
+      color: var(--gold-soft);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 13px;
+      border-radius: 99px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+      display: none;
+      align-items: center;
+      gap: 5px;
+    }
+
+    body.ui-hidden #top-bar,
+    body.ui-hidden #bottom-dock {
+      opacity: 0;
+      pointer-events: none !important;
+      transform: translateY(-10px);
+    }
+
+    body.ui-hidden #bottom-dock {
+      transform: translate(-50%, 20px);
+    }
+
+    body.ui-hidden #btn-restore-ui {
+      display: inline-flex;
+    }
+
+    #top-bar,
+    #bottom-dock {
+      transition: opacity 0.28s ease, transform 0.28s ease;
+    }
+
+    .guide-hint {
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .guide-hint.fade-out {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(6px);
+    }
+
+    @media (max-width: 768px) {
       #top-bar {
+        top: 10px;
+        left: 10px;
+        right: 10px;
         flex-direction: column;
         align-items: stretch;
+        gap: 6px;
       }
+
+      .brand-box {
+        padding: 8px 12px;
+        border-radius: 13px;
+        gap: 0;
+      }
+
+      .brand-title {
+        font-size: 14.5px;
+        width: 100%;
+        justify-content: space-between;
+        gap: 6px;
+      }
+
+      .online-badge {
+        font-size: 10.5px;
+        padding: 2px 7px;
+      }
+
+      .mobile-top-actions {
+        display: inline-flex;
+      }
+
+      /* Hide detailed sub-menus by default on mobile so the 3D view is wide open */
+      .brand-sub {
+        display: none;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(235, 195, 135, 0.18);
+        flex-wrap: wrap;
+        gap: 6px;
+        font-size: 11.5px;
+      }
+
+      #top-bar.mobile-menu-open .brand-sub {
+        display: flex;
+      }
+
       .right-controls {
+        display: none;
         align-items: stretch;
+        gap: 6px;
       }
+
+      #top-bar.mobile-menu-open .right-controls {
+        display: flex;
+      }
+
       .control-row {
         justify-content: center;
+        padding: 6px 8px;
+        border-radius: 12px;
+        gap: 4px;
       }
+
+      .chip-btn {
+        font-size: 11px;
+        padding: 5px 8px;
+        border-radius: 8px;
+      }
+
+      #prayer-status-banner {
+        top: 58px;
+        width: max-content;
+        max-width: 92vw;
+        padding: 6px 12px;
+        font-size: 12px;
+        gap: 8px;
+        border-radius: 12px;
+      }
+
+      #bottom-dock {
+        bottom: 10px;
+        width: 94vw;
+        gap: 5px;
+      }
+
+      .guide-hint {
+        font-size: 11px;
+        padding: 4px 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 92vw;
+      }
+
+      .dock-buttons {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        padding: 7px 8px;
+        gap: 5px;
+        border-radius: 14px;
+      }
+
       .action-btn {
-        padding: 8px 11px;
-        font-size: 12.5px;
+        padding: 7px 4px;
+        font-size: 11.5px;
+        border-radius: 10px;
+        justify-content: center;
+        gap: 4px;
+        white-space: nowrap;
+      }
+
+      .count-pill {
+        font-size: 10px;
+        padding: 1px 5px;
       }
     }
   </style>
@@ -596,6 +777,9 @@
 <body>
   <div id="canvas-container"></div>
   <div id="labels-container"></div>
+
+  <!-- Floating Restore UI Button when in clean view mode -->
+  <button id="btn-restore-ui" title="메뉴 다시 표시">👁️ 메뉴 보이기</button>
 
   <!-- Top Header -->
   <header id="top-bar">
@@ -606,12 +790,17 @@
           <span class="online-dot"></span>
           <span id="online-count">함께 기도하는 이 7명</span>
         </span>
+        <div class="mobile-top-actions">
+          <button class="mobile-menu-btn" id="btn-mobile-menu">🎛️ 메뉴·이동 ▾</button>
+          <button class="ui-hide-btn" id="btn-hide-ui" title="화면 가림 없이 전체 보기">👁️</button>
+        </div>
       </div>
       <div class="brand-sub">
         <span>나의 이름: <strong id="my-name-display" style="color: var(--gold-soft);">온유한 어린양</strong></span>
         <button class="reroll-btn" id="btn-reroll-name" title="새로운 은혜의 이름으로 변경">이름 바꾸기 ↻</button>
         <button class="reroll-btn" id="btn-reroll-style" title="헤어·의상·소품 스타일 변경">👕 아바타 꾸미기</button>
         <button class="reroll-btn" id="btn-open-invite" style="background: rgba(243, 200, 120, 0.3); border-color: var(--gold); font-weight: 600;">🔗 다른 사람 초대하기</button>
+        <button class="reroll-btn" id="btn-hide-ui-pc" title="화면의 메뉴를 숨기고 예배당에 집중하기">👁️ 화면만 보기</button>
       </div>
     </div>
 
@@ -2295,6 +2484,7 @@
 
     // Modals Open / Close
     function openModal(id) {
+      if (typeof closeMobileMenu === 'function') closeMobileMenu();
       document.getElementById(id).classList.add('open');
       audio.playSoftChime();
     }
@@ -2312,6 +2502,49 @@
     });
 
     // Zone Switcher (본당 / 은혜 로비 / 외부 기도정원 빠른 이동)
+    const topBarEl = document.getElementById('top-bar');
+    const mobileMenuBtn = document.getElementById('btn-mobile-menu');
+
+    function closeMobileMenu() {
+      topBarEl.classList.remove('mobile-menu-open');
+      if (mobileMenuBtn) mobileMenuBtn.textContent = '🎛️ 메뉴·이동 ▾';
+    }
+
+    if (mobileMenuBtn) {
+      mobileMenuBtn.addEventListener('click', () => {
+        const isOpen = topBarEl.classList.toggle('mobile-menu-open');
+        mobileMenuBtn.textContent = isOpen ? '✕ 메뉴 닫기' : '🎛️ 메뉴·이동 ▾';
+      });
+    }
+
+    // Close mobile menu when touching the 3D canvas
+    document.getElementById('canvas-container').addEventListener('pointerdown', () => {
+      if (topBarEl.classList.contains('mobile-menu-open')) {
+        closeMobileMenu();
+      }
+    });
+
+    // Clean View (Hide/Restore UI)
+    function hideAllUI() {
+      closeMobileMenu();
+      document.body.classList.add('ui-hidden');
+      showToast('👁️ 화면 가림 없는 몰입 모드입니다. 우측 상단 버튼으로 메뉴를 다시 열 수 있습니다.');
+    }
+    document.getElementById('btn-hide-ui')?.addEventListener('click', hideAllUI);
+    document.getElementById('btn-hide-ui-pc')?.addEventListener('click', hideAllUI);
+    document.getElementById('btn-restore-ui')?.addEventListener('click', () => {
+      document.body.classList.remove('ui-hidden');
+    });
+
+    // Auto-fade bottom guide hint after 4.5 seconds so it doesn't clutter the view
+    setTimeout(() => {
+      const hintEl = document.getElementById('guide-hint');
+      if (hintEl) {
+        hintEl.classList.add('fade-out');
+        setTimeout(() => { hintEl.style.display = 'none'; }, 550);
+      }
+    }, 4500);
+
     const zoneButtons = document.querySelectorAll('[data-zone]');
     function updateActiveZoneUI(zPos) {
       const currentZZone = zPos > 17.5 ? 'garden' : zPos > 7.8 ? 'lobby' : 'sanctuary';
@@ -2323,6 +2556,7 @@
     zoneButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const zone = btn.getAttribute('data-zone');
+        closeMobileMenu();
         standUpPlayer();
         if (zone === 'sanctuary') {
           player.root.position.set(0, 0, 5.5);
@@ -2486,9 +2720,13 @@
     function updateOnlineCountDisplay() {
       const count = 1 + companions.length + remotePeers.size;
       const roomLabel = currentRoom === '본당' ? '' : `[${currentRoom}] `;
-      document.getElementById('online-count').textContent = `${roomLabel}함께 기도하는 이 ${count}명`;
+      const isMobile = window.innerWidth <= 768;
+      document.getElementById('online-count').textContent = isMobile
+        ? `${roomLabel}${count}명`
+        : `${roomLabel}함께 기도하는 이 ${count}명`;
     }
     updateOnlineCountDisplay();
+    window.addEventListener('resize', updateOnlineCountDisplay);
 
     function getInviteUrl() {
       const base = window.location.href.split('?')[0];

@@ -610,6 +610,7 @@
       <div class="brand-sub">
         <span>나의 이름: <strong id="my-name-display" style="color: var(--gold-soft);">온유한 어린양</strong></span>
         <button class="reroll-btn" id="btn-reroll-name" title="새로운 은혜의 이름으로 변경">이름 바꾸기 ↻</button>
+        <button class="reroll-btn" id="btn-reroll-style" title="헤어·의상·소품 스타일 변경">👕 아바타 꾸미기</button>
         <button class="reroll-btn" id="btn-open-invite" style="background: rgba(243, 200, 120, 0.3); border-color: var(--gold); font-weight: 600;">🔗 다른 사람 초대하기</button>
       </div>
     </div>
@@ -1619,74 +1620,260 @@
     scene.add(particles);
 
     /**************************************************************
-     * 4. CUTE 3D AVATAR BUILDER ('산사' 스타일 캐릭터)
+     * 4. HIGH-DETAIL CUTE 3D AVATAR BUILDER (고디테일 3D 캐릭터)
      **************************************************************/
-    function createCuteAvatar(name, robeColor, isMe = false) {
+    const HAIR_COLORS = [0x261811, 0x3d271d, 0x593a28, 0x1c1817, 0x6e4932];
+
+    function createCuteAvatar(name, robeColor, isMe = false, styleIdx = 0) {
       const root = new THREE.Group();
       const bodyGroup = new THREE.Group();
       root.add(bodyGroup);
 
-      // Soft Shadow Blob under feet
+      // Soft Shadow under feet
       const shadowMesh = new THREE.Mesh(
-        new THREE.CircleGeometry(0.38, 16),
-        new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32 })
+        new THREE.CircleGeometry(0.42, 24),
+        new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 })
       );
       shadowMesh.rotation.x = -Math.PI / 2;
-      shadowMesh.position.y = 0.02;
+      shadowMesh.position.y = 0.015;
       root.add(shadowMesh);
 
-      // Robe / Cozy Cardigan Torso
-      const torsoMat = new THREE.MeshStandardMaterial({ color: robeColor, roughness: 0.75 });
-      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.34, 0.72, 16), torsoMat);
-      torso.position.y = 0.42;
+      const skinMat = new THREE.MeshStandardMaterial({ color: 0xfce2c4, roughness: 0.55 });
+      const torsoMat = new THREE.MeshStandardMaterial({ color: robeColor, roughness: 0.72 });
+      const pantsMat = new THREE.MeshStandardMaterial({ color: 0x2c2523, roughness: 0.8 });
+      const shoeMat = new THREE.MeshStandardMaterial({ color: 0x3b2314, roughness: 0.5 });
+      const creamMat = new THREE.MeshStandardMaterial({ color: 0xf7efe1, roughness: 0.65 });
+      const hairColor = HAIR_COLORS[styleIdx % HAIR_COLORS.length];
+      const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.75 });
+
+      // 1) Articulated Left & Right Legs + Cute Rounded Shoes
+      function createLeg(xOffset) {
+        const legPivot = new THREE.Group();
+        legPivot.position.set(xOffset, 0.28, 0);
+
+        const legCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.068, 0.24, 12), pantsMat);
+        legCyl.position.y = -0.11;
+        legCyl.castShadow = true;
+
+        const shoe = new THREE.Mesh(new THREE.SphereGeometry(0.088, 14, 12), shoeMat);
+        shoe.scale.set(0.95, 0.65, 1.35);
+        shoe.position.set(0, -0.22, -0.035);
+        shoe.castShadow = true;
+
+        legPivot.add(legCyl, shoe);
+        return legPivot;
+      }
+      const legL = createLeg(-0.11);
+      const legR = createLeg(0.11);
+      bodyGroup.add(legL, legR);
+
+      // 2) Layered Coat / Choir Tunic Torso + Hem Trim + Scarf + Cross Pendant
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.31, 0.62, 20), torsoMat);
+      torso.position.y = 0.52;
       torso.castShadow = true;
       bodyGroup.add(torso);
 
-      // Head
-      const skinMat = new THREE.MeshStandardMaterial({ color: 0xfce2c4, roughness: 0.6 });
+      const hemTrim = new THREE.Mesh(new THREE.TorusGeometry(0.305, 0.022, 10, 24), creamMat);
+      hemTrim.rotation.x = Math.PI / 2;
+      hemTrim.position.y = 0.22;
+      bodyGroup.add(hemTrim);
+
+      // Cozy Knit Collar / Scarf around Neck
+      const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.055, 12, 20), creamMat);
+      scarf.rotation.x = Math.PI / 2;
+      scarf.position.y = 0.81;
+      bodyGroup.add(scarf);
+
+      // Golden Cross Necklace Pendant on Chest
+      const chestCrossGroup = new THREE.Group();
+      const cV = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.13, 0.018), goldMat);
+      const cH = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.028, 0.018), goldMat);
+      cH.position.y = 0.022;
+      chestCrossGroup.add(cV, cH);
+      chestCrossGroup.position.set(0, 0.66, -0.255);
+      chestCrossGroup.rotation.x = -0.15;
+      bodyGroup.add(chestCrossGroup);
+
+      // 3) Articulated Left & Right Arms (Shoulders + Sleeves + Hands + Mini Bible)
+      function createArm(isLeft) {
+        const armPivot = new THREE.Group();
+        armPivot.position.set(isLeft ? -0.24 : 0.24, 0.74, 0);
+
+        const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.078, 0.32, 14), torsoMat);
+        sleeve.position.y = -0.14;
+        sleeve.castShadow = true;
+
+        const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.074, 0.016, 8, 14), creamMat);
+        cuff.rotation.x = Math.PI / 2;
+        cuff.position.y = -0.29;
+
+        const hand = new THREE.Mesh(new THREE.SphereGeometry(0.068, 14, 14), skinMat);
+        hand.position.y = -0.34;
+        hand.castShadow = true;
+
+        armPivot.add(sleeve, cuff, hand);
+        return { armPivot, hand };
+      }
+      const leftArmObj = createArm(true);
+      const rightArmObj = createArm(false);
+      bodyGroup.add(leftArmObj.armPivot, rightArmObj.armPivot);
+
+      // Handheld Mini Leather Bible (성경책 소품) attached to Left Arm
+      const miniBibleGroup = new THREE.Group();
+      const bibleCover = new THREE.Mesh(
+        new THREE.BoxGeometry(0.16, 0.21, 0.055),
+        new THREE.MeshStandardMaterial({ color: 0x6e1e1e, roughness: 0.6 })
+      );
+      const biblePages = new THREE.Mesh(
+        new THREE.BoxGeometry(0.145, 0.195, 0.042),
+        new THREE.MeshStandardMaterial({ color: 0xfff8e7 })
+      );
+      biblePages.position.x = 0.008;
+      const bibleCross = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.09, 0.06), goldMat);
+      miniBibleGroup.add(bibleCover, biblePages, bibleCross);
+      miniBibleGroup.position.set(0.05, -0.31, -0.08);
+      miniBibleGroup.rotation.set(0.3, 0.2, -0.2);
+      leftArmObj.armPivot.add(miniBibleGroup);
+
+      // 4) Detailed Head, Ears, Nose, Expressive Eyes & Hairstyles
       const headGroup = new THREE.Group();
-      headGroup.position.y = 0.98;
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 20, 20), skinMat);
+      headGroup.position.y = 1.05;
+      bodyGroup.add(headGroup);
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.275, 24, 24), skinMat);
+      head.scale.set(1.04, 0.98, 1.0);
       head.castShadow = true;
       headGroup.add(head);
 
-      // Hair Cap
-      const hairMat = new THREE.MeshStandardMaterial({ color: 0x2e2018, roughness: 0.8 });
-      const hair = new THREE.Mesh(
-        new THREE.SphereGeometry(0.282, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.58),
+      // Cute Ears
+      [-0.27, 0.27].forEach(ex => {
+        const ear = new THREE.Mesh(new THREE.SphereGeometry(0.058, 12, 12), skinMat);
+        ear.scale.set(0.6, 1.0, 0.8);
+        ear.position.set(ex, -0.02, -0.02);
+        headGroup.add(ear);
+      });
+
+      // Tiny Button Nose
+      const nose = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 10), skinMat);
+      nose.position.set(0, -0.025, -0.275);
+      headGroup.add(nose);
+
+      // Open Sparkling Eyes + White Catchlights
+      const openEyesGroup = new THREE.Group();
+      const eyeDarkMat = new THREE.MeshBasicMaterial({ color: 0x1f140d });
+      const highlightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+      [-0.095, 0.095].forEach(ex => {
+        const iris = new THREE.Mesh(new THREE.SphereGeometry(0.034, 12, 12), eyeDarkMat);
+        iris.scale.set(1.0, 1.18, 0.6);
+        iris.position.set(ex, 0.015, -0.255);
+
+        const shine = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), highlightMat);
+        shine.position.set(ex + (ex < 0 ? -0.01 : 0.01), 0.028, -0.275);
+
+        // Gentle Eyebrow
+        const brow = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.014, 0.015), hairMat);
+        brow.position.set(ex, 0.075, -0.258);
+        brow.rotation.z = ex < 0 ? 0.1 : -0.1;
+
+        openEyesGroup.add(iris, shine, brow);
+      });
+      headGroup.add(openEyesGroup);
+
+      // Peaceful Closed Prayer Eyes (기도할 때 감는 눈)
+      const closedEyesGroup = new THREE.Group();
+      [-0.095, 0.095].forEach(ex => {
+        const closedArc = new THREE.Mesh(
+          new THREE.TorusGeometry(0.032, 0.008, 8, 16, Math.PI),
+          eyeDarkMat
+        );
+        closedArc.position.set(ex, 0.015, -0.262);
+        closedArc.rotation.z = Math.PI;
+        closedEyesGroup.add(closedArc);
+      });
+      closedEyesGroup.visible = false;
+      headGroup.add(closedEyesGroup);
+
+      // Rosy Cheeks & Gentle Smile
+      const blushMat = new THREE.MeshBasicMaterial({ color: 0xf48b7f, transparent: true, opacity: 0.48 });
+      [-0.15, 0.15].forEach(bx => {
+        const blush = new THREE.Mesh(new THREE.CircleGeometry(0.042, 12), blushMat);
+        blush.position.set(bx, -0.045, -0.252);
+        blush.rotation.y = Math.PI + (bx < 0 ? 0.35 : -0.35);
+        headGroup.add(blush);
+      });
+
+      const smile = new THREE.Mesh(
+        new THREE.TorusGeometry(0.026, 0.006, 8, 14, Math.PI),
+        new THREE.MeshBasicMaterial({ color: 0x8c4a38 })
+      );
+      smile.position.set(0, -0.068, -0.265);
+      smile.rotation.z = Math.PI;
+      headGroup.add(smile);
+
+      // 5) Base Hair Cap + Bangs + Style Variations (Beret / Bun / Sidelocks / Halo)
+      const hairCap = new THREE.Mesh(
+        new THREE.SphereGeometry(0.292, 24, 18, 0, Math.PI * 2, 0, Math.PI * 0.62),
         hairMat
       );
-      hair.rotation.x = -0.18;
-      headGroup.add(hair);
+      hairCap.scale.set(1.05, 1.0, 1.04);
+      hairCap.rotation.x = -0.22;
+      headGroup.add(hairCap);
 
-      // Peaceful Eyes (Gentle closed/calm arcs)
-      const eyeMat = new THREE.MeshBasicMaterial({ color: 0x24170e });
-      const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), eyeMat);
-      const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), eyeMat);
-      eyeL.position.set(-0.085, 0.01, -0.245);
-      eyeR.position.set(0.085, 0.01, -0.245);
-      headGroup.add(eyeL, eyeR);
+      // Front Bangs (앞머리 디테일)
+      [-0.11, 0, 0.11].forEach((bx, bIdx) => {
+        const bang = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), hairMat);
+        bang.scale.set(1.1, 0.85, 0.65);
+        bang.position.set(bx, 0.15 - (bIdx === 1 ? 0.015 : 0), -0.24);
+        headGroup.add(bang);
+      });
 
-      // Warm Blush Cheeks
-      const blushMat = new THREE.MeshBasicMaterial({ color: 0xf2968c, transparent: true, opacity: 0.45 });
-      const blushL = new THREE.Mesh(new THREE.CircleGeometry(0.038, 10), blushMat);
-      const blushR = new THREE.Mesh(new THREE.CircleGeometry(0.038, 10), blushMat);
-      blushL.position.set(-0.14, -0.04, -0.242);
-      blushR.position.set(0.14, -0.04, -0.242);
-      blushL.rotation.y = Math.PI;
-      blushR.rotation.y = Math.PI;
-      headGroup.add(blushL, blushR);
+      const variantGroup = new THREE.Group();
+      headGroup.add(variantGroup);
 
-      bodyGroup.add(headGroup);
-
-      // Hands (Folded in front when praying)
-      const handsGroup = new THREE.Group();
-      const handL = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 12), skinMat);
-      const handR = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 12), skinMat);
-      handL.position.set(-0.22, 0.48, -0.14);
-      handR.position.set(0.22, 0.48, -0.14);
-      handsGroup.add(handL, handR);
-      bodyGroup.add(handsGroup);
+      function applyStyleVariant(sIdx) {
+        while (variantGroup.children.length > 0) {
+          variantGroup.remove(variantGroup.children[0]);
+        }
+        const mode = sIdx % 4;
+        if (mode === 0) {
+          // Cute Warm Beret (베레모 스타일)
+          const beretMat = new THREE.MeshStandardMaterial({ color: 0xd9b382, roughness: 0.7 });
+          const beret = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.29, 0.09, 20), beretMat);
+          beret.position.set(0.03, 0.26, 0.02);
+          beret.rotation.z = -0.15;
+          const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.06, 8), beretMat);
+          tip.position.set(0.05, 0.32, 0.02);
+          variantGroup.add(beret, tip);
+        } else if (mode === 1) {
+          // Cute Top Bun + Side Hair Locks (똥머리/포니테일 & 옆머리)
+          const bun = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 14), hairMat);
+          bun.position.set(0, 0.31, 0.12);
+          const sideL = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.25, 10), hairMat);
+          sideL.position.set(-0.25, -0.05, -0.08);
+          const sideR = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.25, 10), hairMat);
+          sideR.position.set(0.25, -0.05, -0.08);
+          variantGroup.add(bun, sideL, sideR);
+        } else if (mode === 2) {
+          // Round Bob Hair + Golden Hairpin (둥근 단발 & 금빛 머리핀)
+          const bobBack = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.28, 0.31, 0.26, 20, 1, true, -Math.PI * 0.65, Math.PI * 1.3),
+            hairMat
+          );
+          bobBack.position.y = -0.02;
+          const pin = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.02, 0.02), goldMat);
+          pin.position.set(0.18, 0.12, -0.22);
+          pin.rotation.z = -0.3;
+          variantGroup.add(bobBack, pin);
+        } else {
+          // Halo / Crown of Peace Ring for Choir Look
+          const halo = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.015, 10, 28), goldMat);
+          halo.rotation.x = Math.PI / 2;
+          halo.position.set(0, 0.35, 0);
+          variantGroup.add(halo);
+        }
+      }
+      applyStyleVariant(styleIdx);
 
       // HTML Name Tag
       const labelEl = document.createElement('div');
@@ -1703,8 +1890,18 @@
         root,
         bodyGroup,
         headGroup,
-        handL,
-        handR,
+        torsoMat,
+        legL,
+        legR,
+        armL: leftArmObj.armPivot,
+        armR: rightArmObj.armPivot,
+        handL: leftArmObj.hand,
+        handR: rightArmObj.hand,
+        miniBibleGroup,
+        openEyesGroup,
+        closedEyesGroup,
+        applyStyleVariant,
+        styleIdx,
         labelEl,
         nameEl,
         name,
@@ -1765,8 +1962,8 @@
       { name: '찬양하는 시냇가', color: 0x8fa882, seatIdx: 33 }    // Outdoor Garden bench
     ];
 
-    companionConfigs.forEach(cfg => {
-      const comp = createCuteAvatar(cfg.name, cfg.color, false);
+    companionConfigs.forEach((cfg, idx) => {
+      const comp = createCuteAvatar(cfg.name, cfg.color, false, idx + 1);
       const seat = seatSpots[cfg.seatIdx];
       if (seat) {
         seat.occupiedBy = comp;
@@ -2032,6 +2229,18 @@
       localStorage.setItem('chapel_my_name', newName);
       showToast(`새로운 은혜의 이름 '${newName}'(으)로 변경되었습니다.`);
       broadcastPresence();
+    });
+
+    let myStyleSeed = 0;
+    const STYLE_LABELS = ['베레모 & 코트', '포니테일 번 & 가디건', '단발 & 금빛 머리핀', '성가대 예복 & 평화의 관'];
+    document.getElementById('btn-reroll-style').addEventListener('click', () => {
+      myStyleSeed++;
+      const newColor = AVATAR_COLORS[myStyleSeed % AVATAR_COLORS.length];
+      player.torsoMat.color.setHex(newColor);
+      player.applyStyleVariant(myStyleSeed);
+      showBubble(player, `👕 ${STYLE_LABELS[myStyleSeed % STYLE_LABELS.length]}`);
+      audio.playSoftChime();
+      showToast(`👕 아바타 스타일이 '${STYLE_LABELS[myStyleSeed % STYLE_LABELS.length]}'(으)로 변경되었습니다.`);
     });
 
     // Sound Controls
@@ -2469,6 +2678,12 @@
     const clock = new THREE.Clock();
 
     function updateAvatarAnimation(av, dt, elapsed) {
+      const isPrayingPosture = av.state === 'sitting' || av.state === 'kneeling';
+      // Blink every ~4 seconds when eyes are open
+      const isBlinking = Math.sin(elapsed * 1.7 + av.walkPhase) > 0.96;
+      av.openEyesGroup.visible = !isPrayingPosture && !isBlinking && av.bowTime <= 0.1;
+      av.closedEyesGroup.visible = isPrayingPosture || isBlinking || av.bowTime > 0.1;
+
       if (av.state === 'walking') {
         const diff = new THREE.Vector3().subVectors(av.targetPos, av.root.position);
         diff.y = 0;
@@ -2480,32 +2695,47 @@
             av.state = 'standing';
           }
         } else {
-          const speed = 3.1;
+          const speed = 3.2;
           diff.normalize();
           av.root.position.addScaledVector(diff, Math.min(dist, speed * dt));
           const targetAngle = Math.atan2(diff.x, diff.z) + Math.PI;
           av.root.rotation.y = targetAngle;
 
           av.walkPhase += dt * 11;
-          av.bodyGroup.position.y = Math.abs(Math.sin(av.walkPhase)) * 0.08;
-          av.handL.position.set(-0.24, 0.45, Math.sin(av.walkPhase) * 0.12);
-          av.handR.position.set(0.24, 0.45, -Math.sin(av.walkPhase) * 0.12);
+          av.bodyGroup.position.y = Math.abs(Math.sin(av.walkPhase)) * 0.065;
+          // Swing legs & arms while walking
+          av.legL.rotation.x = Math.sin(av.walkPhase) * 0.55;
+          av.legR.rotation.x = -Math.sin(av.walkPhase) * 0.55;
+          av.armL.rotation.set(0.25 + Math.sin(av.walkPhase) * 0.2, 0, 0.08);
+          av.armR.rotation.set(-Math.sin(av.walkPhase) * 0.45, 0, -0.08);
+          av.miniBibleGroup.visible = true;
+          av.headGroup.rotation.x = 0;
         }
       } else if (av.state === 'sitting') {
         av.bodyGroup.position.y = 0.18 + Math.sin(elapsed * 2 + av.walkPhase) * 0.012;
-        av.handL.position.set(-0.07, 0.46, -0.24);
-        av.handR.position.set(0.07, 0.46, -0.24);
+        av.legL.rotation.x = 1.35; // Legs bent forward on the pew/bench
+        av.legR.rotation.x = 1.35;
+        // Fold arms together in prayer
+        av.armL.rotation.set(0.85, 0.42, -0.35);
+        av.armR.rotation.set(0.85, -0.42, 0.35);
+        av.miniBibleGroup.visible = false;
         av.headGroup.rotation.x = 0.22; // Head gently bowed in prayer
       } else if (av.state === 'kneeling') {
         av.bodyGroup.position.y = -0.14 + Math.sin(elapsed * 2 + av.walkPhase) * 0.01;
-        av.handL.position.set(-0.06, 0.52, -0.25);
-        av.handR.position.set(0.06, 0.52, -0.25);
+        av.legL.rotation.x = -1.25; // Kneeling legs tucked back
+        av.legR.rotation.x = -1.25;
+        av.armL.rotation.set(0.95, 0.45, -0.38);
+        av.armR.rotation.set(0.95, -0.45, 0.38);
+        av.miniBibleGroup.visible = false;
         av.headGroup.rotation.x = 0.32;
       } else {
-        // Standing idle
-        av.bodyGroup.position.y = Math.sin(elapsed * 2.2 + av.walkPhase) * 0.018;
-        av.handL.position.set(-0.22, 0.46, -0.1);
-        av.handR.position.set(0.22, 0.46, -0.1);
+        // Standing idle (holding Mini Bible gently)
+        av.bodyGroup.position.y = Math.sin(elapsed * 2.2 + av.walkPhase) * 0.016;
+        av.legL.rotation.x = 0;
+        av.legR.rotation.x = 0;
+        av.armL.rotation.set(0.32, 0.15, 0.06);
+        av.armR.rotation.set(Math.sin(elapsed * 1.8 + av.walkPhase) * 0.05, 0, -0.06);
+        av.miniBibleGroup.visible = true;
         av.headGroup.rotation.x = 0;
       }
 
@@ -2517,7 +2747,7 @@
 
       // Project 3D position to 2D screen coordinates for floating name label
       const headWorld = av.root.position.clone();
-      headWorld.y += av.state === 'kneeling' ? 1.25 : 1.52;
+      headWorld.y += av.state === 'kneeling' ? 1.32 : 1.62;
       headWorld.project(camera);
 
       if (headWorld.z < 1) {
@@ -2544,6 +2774,8 @@
       if (keys.KeyA || keys.ArrowLeft) moveX -= 1;
       if (keys.KeyD || keys.ArrowRight) moveX += 1;
 
+      // Update Player, Companion & Remote Real-Time Avatars
+      updateAvatarAnimation(player, dt, elapsed);
       if (moveX !== 0 || moveZ !== 0) {
         const moveVec = new THREE.Vector3(moveX, 0, moveZ).normalize();
         moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), camYaw);
@@ -2553,13 +2785,14 @@
         player.targetPos.copy(player.root.position);
         player.root.rotation.y = Math.atan2(moveVec.x, moveVec.z) + Math.PI;
         player.walkPhase += dt * 11;
-        player.bodyGroup.position.y = Math.abs(Math.sin(player.walkPhase)) * 0.08;
+        player.bodyGroup.position.y = Math.abs(Math.sin(player.walkPhase)) * 0.065;
+        player.legL.rotation.x = Math.sin(player.walkPhase) * 0.55;
+        player.legR.rotation.x = -Math.sin(player.walkPhase) * 0.55;
+        player.armL.rotation.set(0.25 + Math.sin(player.walkPhase) * 0.2, 0, 0.08);
+        player.armR.rotation.set(-Math.sin(player.walkPhase) * 0.45, 0, -0.08);
       }
 
       updateActiveZoneUI(player.root.position.z);
-
-      // Update Player, Companion & Remote Real-Time Avatars
-      updateAvatarAnimation(player, dt, elapsed);
       companions.forEach(c => updateAvatarAnimation(c, dt, elapsed));
       remotePeers.forEach(entry => updateAvatarAnimation(entry.avatar, dt, elapsed));
 
